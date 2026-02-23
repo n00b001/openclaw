@@ -6,16 +6,39 @@ This document provides guidelines for AI agents working on this repository.
 
 **IMPORTANT**: When making ANY code changes, ALWAYS follow this workflow:
 
-1. **git pull** - Get latest changes from remote
-2. **git branch** - Create a feature branch for the work
-3. **git add** - Stage the changes
-4. **git commit** - Commit with descriptive message
-5. **git push** - Push to remote
-6. **create PR** - Create a pull request using `gh pr create`
+1. **Use worktrees** - Create a git worktree for isolation: `git worktree add ../polyclaw-worktrees/branch-name -b branch-name`
+2. **git pull** - Get latest changes from remote
+3. **Make changes** - Edit files as needed
+4. **git add** - Stage the changes
+5. **git commit** - Commit with descriptive message
+6. **git push** - Push to remote
+7. **create PR** - Create a pull request using `gh pr create`
+8. **Monitor PR** - Watch the PR status and ensure all CI checks pass
+9. **Merge PR** - After CI succeeds and approval, merge the PR
+10. **Verify post-merge** - Ensure post-merge actions (builds, deployments) succeed
 
 This workflow is NON-NEGOTIABLE for all code changes.
 
-**IMPORTANT**: You must always pull origin/main into your branch whenever making a change. You must resolve conflicts if they exist.
+**IMPORTANT**:
+- Always use worktrees for isolation
+- Always create a PR for every change
+- Always monitor PR status until CI succeeds
+- Fix any failing checks immediately
+- Always merge after approval
+- Always verify post-merge actions succeed
+
+### PR Monitoring (CRITICAL)
+After creating a PR, you **MUST** monitor it until all checks pass:
+
+1. Check status: `gh pr checks <pr-number>`
+2. View failures: `gh run view <run-id> --log-failed`
+3. Fix issues locally and push new commits
+4. Repeat until all checks pass
+5. Only then wait for approval to merge
+
+**Never abandon a PR with failing checks.**
+
+**Project Memory**: Store project-specific knowledge in MEMORY.md (patterns, gotchas, reference info).
 
 ## Development Principles
 

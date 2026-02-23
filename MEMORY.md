@@ -10,10 +10,26 @@ When making ANY code changes, ALWAYS follow this workflow:
 4. **git commit** - Commit with descriptive message
 5. **git push** - Push to remote
 6. **create PR** - Create a pull request using `gh pr create`
+7. **monitor PR** - Check CI status and fix any failures immediately
 
 This workflow is NON-NEGOTIABLE for all code changes.
 
 **IMPORTANT**: You must always pull origin/main into your branch whenever making a change. You must resolve conflicts if they exist.
+
+## PR Monitoring (CRITICAL)
+
+**After creating any PR, you MUST monitor and ensure all CI checks pass:**
+
+1. Check status: `gh pr checks <pr-number> --repo xfanth/polyclaw`
+2. If failed, view logs: `gh run view <run-id> --log-failed`
+3. Fix locally in your worktree
+4. Commit and push the fix
+5. Re-check until all checks pass
+
+**Do not abandon a PR with failing checks.** Common fixes:
+- Pre-commit: Run `pre-commit run --all-files` locally before committing
+- Tests: Run `uv run pytest tests/unit -v` locally
+- YAML lint: Check indentation and syntax
 
 ## Important Rules
 
@@ -165,7 +181,13 @@ When adding new env vars to `configure.js`, **always add them to the whitelist**
 
 - **Repository**: `xfanth/polyclaw` (formerly `xfanth/openclaw`)
 - **Docker Images**: `ghcr.io/xfanth/{upstream}` where upstream is `openclaw`, `picoclaw`, `ironclaw`, or `zeroclaw`
-- **Image tags**: `xfanth_main`, `oc_main`, `pc_main`, `ic_main`, `zc_main`, or version tags like `v2026.2.1`
+- **Image tags**: `{upstream}_main` format (e.g., `openclaw_main`, `picoclaw_main`, `ironclaw_main`, `zeroclaw_main`)
+- **Full image names**:
+  - `ghcr.io/xfanth/zeroclaw:zeroclaw_main`
+  - `ghcr.io/xfanth/openclaw:openclaw_main`
+  - `ghcr.io/xfanth/ironclaw:ironclaw_main`
+  - `ghcr.io/xfanth/picoclaw:picoclaw_main`
+- **Note**: The `:latest` tag does NOT exist - always use `{upstream}_main` tags
 
 When renaming a repository:
 1. Update README.md badge URLs
