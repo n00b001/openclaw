@@ -135,7 +135,7 @@ if [ "$(id -u)" = "0" ]; then
     # Remove any existing config to avoid "duplicate default server" errors
     rm -f /etc/nginx/sites-enabled/* 2>/dev/null || true
     rm -f /etc/nginx/conf.d/*.conf 2>/dev/null || true
-    
+
     tee "/etc/nginx/conf.d/${UPSTREAM}.conf" > /dev/null << NGINX_EOF
 # $UPSTREAM Nginx Configuration
 

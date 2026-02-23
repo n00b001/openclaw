@@ -19,7 +19,7 @@ This document provides guidelines for AI agents working on this repository.
 
 This workflow is NON-NEGOTIABLE for all code changes.
 
-**IMPORTANT**: 
+**IMPORTANT**:
 - Always use worktrees for isolation
 - Always create a PR for every change
 - Always monitor PR status until CI succeeds
