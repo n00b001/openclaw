@@ -235,6 +235,9 @@ NGINX_EOF
         echo "" > /etc/nginx/.htpasswd
         log_warn "No AUTH_PASSWORD set - gateway will be open"
     fi
+    # Ensure nginx can read the htpasswd file
+    chown ${UPSTREAM}:${UPSTREAM} /etc/nginx/.htpasswd 2>/dev/null || true
+    chmod 644 /etc/nginx/.htpasswd
 
     # Test nginx config
     nginx -t || log_warn "Nginx configuration test had issues"
