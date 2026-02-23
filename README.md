@@ -258,9 +258,9 @@ BROWSER_DEFAULT_PROFILE=openclaw
 BROWSER_EVALUATE_ENABLED=true
 ```
 
-Access the browser desktop via noVNC at `http://localhost:8080/browser/`
+Access the browser desktop via noVNC at `http://localhost:6080/vnc.html`
 
-**Note:** The browser sidecar must provide noVNC on port `6080`. The `/browser/` route proxies to `browser:6080/vnc.html`.
+**Note:** The browser sidecar exposes noVNC on port `6080` and Chrome DevTools Protocol on port `9222`. These ports are mapped to the host by default.
 
 Example browser image that includes noVNC on port 6080:
 - `ghcr.io/xfanth/cdp_vnc_browser:latest`
@@ -446,6 +446,8 @@ services:
 | `BROWSER_CDP_URL` | Chrome DevTools URL | - |
 | `BROWSER_DEFAULT_PROFILE` | Browser profile name | - |
 | `BROWSER_EVALUATE_ENABLED` | Enable JS evaluation | `false` |
+| `BROWSER_VNC_PORT` | noVNC port on host | `6080` |
+| `BROWSER_CDP_PORT` | Chrome DevTools port on host | `9222` |
 
 ### Hooks
 
