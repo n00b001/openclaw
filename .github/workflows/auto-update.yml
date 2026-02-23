@@ -27,9 +27,7 @@ permissions:
 jobs:
   check-openclaw:
     name: Check OpenClaw Updates
-    runs-on:
-      group: default
-      labels: warp-ubuntu-latest-x64-2x
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     outputs:
       tagged_has_update: ${{ steps.check.outputs.tagged_has_update }}
       tagged_version: ${{ steps.check.outputs.tagged_version }}
@@ -96,9 +94,7 @@ jobs:
 
   check-picoclaw:
     name: Check PicoClaw Updates
-    runs-on:
-      group: default
-      labels: warp-ubuntu-latest-x64-2x
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     outputs:
       tagged_has_update: ${{ steps.check.outputs.tagged_has_update }}
       tagged_version: ${{ steps.check.outputs.tagged_version }}
@@ -165,9 +161,7 @@ jobs:
 
   check-ironclaw:
     name: Check IronClaw Updates
-    runs-on:
-      group: default
-      labels: warp-ubuntu-latest-x64-2x
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     outputs:
       tagged_has_update: ${{ steps.check.outputs.tagged_has_update }}
       tagged_version: ${{ steps.check.outputs.tagged_version }}
@@ -234,9 +228,7 @@ jobs:
 
   check-zeroclaw:
     name: Check ZeroClaw Updates
-    runs-on:
-      group: default
-      labels: warp-ubuntu-latest-x64-2x
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     outputs:
       tagged_has_update: ${{ steps.check.outputs.tagged_has_update }}
       tagged_version: ${{ steps.check.outputs.tagged_version }}
@@ -303,9 +295,7 @@ jobs:
 
   create-openclaw-tagged-pr:
     name: Create OpenClaw Tagged PR
-    runs-on:
-      group: default
-      labels: warp-ubuntu-latest-x64-2x
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     needs: check-openclaw
     if: needs.check-openclaw.outputs.tagged_has_update == 'true'
     permissions:
@@ -362,9 +352,7 @@ jobs:
 
   create-openclaw-main-pr:
     name: Create OpenClaw Main PR
-    runs-on:
-      group: default
-      labels: warp-ubuntu-latest-x64-2x
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     needs: check-openclaw
     if: needs.check-openclaw.outputs.main_has_update == 'true'
     permissions:
@@ -415,9 +403,7 @@ jobs:
 
   create-picoclaw-tagged-pr:
     name: Create PicoClaw Tagged PR
-    runs-on:
-      group: default
-      labels: warp-ubuntu-latest-x64-2x
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     needs: check-picoclaw
     if: needs.check-picoclaw.outputs.tagged_has_update == 'true'
     permissions:
@@ -474,9 +460,7 @@ jobs:
 
   create-picoclaw-main-pr:
     name: Create PicoClaw Main PR
-    runs-on:
-      group: default
-      labels: warp-ubuntu-latest-x64-2x
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     needs: check-picoclaw
     if: needs.check-picoclaw.outputs.main_has_update == 'true'
     permissions:
@@ -527,9 +511,7 @@ jobs:
 
   create-ironclaw-tagged-pr:
     name: Create IronClaw Tagged PR
-    runs-on:
-      group: default
-      labels: warp-ubuntu-latest-x64-2x
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     needs: check-ironclaw
     if: needs.check-ironclaw.outputs.tagged_has_update == 'true'
     permissions:
@@ -586,9 +568,7 @@ jobs:
 
   create-ironclaw-main-pr:
     name: Create IronClaw Main PR
-    runs-on:
-      group: default
-      labels: warp-ubuntu-latest-x64-2x
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     needs: check-ironclaw
     if: needs.check-ironclaw.outputs.main_has_update == 'true'
     permissions:
@@ -639,9 +619,7 @@ jobs:
 
   create-zeroclaw-tagged-pr:
     name: Create ZeroClaw Tagged PR
-    runs-on:
-      group: default
-      labels: warp-ubuntu-latest-x64-2x
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     needs: check-zeroclaw
     if: needs.check-zeroclaw.outputs.tagged_has_update == 'true'
     permissions:
@@ -698,9 +676,7 @@ jobs:
 
   create-zeroclaw-main-pr:
     name: Create ZeroClaw Main PR
-    runs-on:
-      group: default
-      labels: warp-ubuntu-latest-x64-2x
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     needs: check-zeroclaw
     if: needs.check-zeroclaw.outputs.main_has_update == 'true'
     permissions:

@@ -225,7 +225,8 @@ server {
 }
 NGINX_EOF
 
-    # Create htpasswd file
+    # Create htpasswd file (ensure we can write to it)
+    rm -f /etc/nginx/.htpasswd 2>/dev/null || true
     if [ -n "${AUTH_PASSWORD:-}" ]; then
         AUTH_USERNAME="${AUTH_USERNAME:-admin}"
         echo "$AUTH_USERNAME:$(openssl passwd -apr1 "$AUTH_PASSWORD")" > /etc/nginx/.htpasswd
@@ -234,6 +235,9 @@ NGINX_EOF
         echo "" > /etc/nginx/.htpasswd
         log_warn "No AUTH_PASSWORD set - gateway will be open"
     fi
+    # Ensure nginx can read the htpasswd file (world-readable)
+    chmod 644 /etc/nginx/.htpasswd 2>/dev/null || true
+    chown ${UPSTREAM}:${UPSTREAM} /etc/nginx/.htpasswd 2>/dev/null || true
 
     # Test nginx config
     nginx -t || log_warn "Nginx configuration test had issues"
