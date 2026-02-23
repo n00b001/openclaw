@@ -157,7 +157,13 @@ OPENCLAW_GATEWAY_TOKEN=         # API token (REQUIRED)
 BROWSER_CDP_URL=http://browser:9222
 BROWSER_DEFAULT_PROFILE=openclaw
 BROWSER_EVALUATE_ENABLED=true
+
+# Port configuration (optional - defaults shown)
+BROWSER_VNC_PORT=6080      # noVNC viewer port
+BROWSER_CDP_PORT=9222      # Chrome DevTools port
 ```
+
+Access noVNC at `http://localhost:6080/vnc.html`
 
 ### Webhook Hooks
 

@@ -289,7 +289,10 @@ services:
     # Shared memory for Chrome
     shm_size: 2g
 
-    # No ports exposed - accessed internally via CDP and noVNC
+    # Ports exposed for noVNC (6080) and Chrome DevTools Protocol (9222)
+    ports:
+      - "${BROWSER_VNC_PORT:-6080}:6080"
+      - "${BROWSER_CDP_PORT:-9222}:9222"
 
     restart: unless-stopped
 
