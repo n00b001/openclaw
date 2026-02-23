@@ -14,8 +14,6 @@
 #   The service name and container name will adapt accordingly
 # =============================================================================
 
-version: '3.8'
-
 services:
   # ===========================================================================
   # Gateway Service - OpenClaw or PicoClaw
@@ -35,7 +33,7 @@ services:
     #   - UPSTREAM=openclaw → ghcr.io/xfanth/openclaw:latest
     #   - UPSTREAM=picoclaw → ghcr.io/xfanth/picoclaw:latest
     #   - UPSTREAM=ironclaw → ghcr.io/xfanth/ironclaw:latest
-    image: ${OPENCLAW_IMAGE:-ghcr.io/xfanth/${UPSTREAM:-openclaw}:latest}
+    image: ${OPENCLAW_IMAGE:-ghcr.io/xfanth/${UPSTREAM:-openclaw}:${UPSTREAM:-openclaw}_main}
 
     container_name: ${UPSTREAM:-openclaw}-gateway
     hostname: ${UPSTREAM:-openclaw}
