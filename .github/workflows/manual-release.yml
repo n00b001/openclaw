@@ -30,9 +30,7 @@ permissions:
 jobs:
   create-release:
     name: Create Release Tag
-    runs-on:
-      group: default
-      labels: warp-ubuntu-latest-x64-2x
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     outputs:
       new_version: ${{ steps.bump.outputs.new_version }}
     steps:
@@ -81,9 +79,7 @@ jobs:
 
   build:
     name: Build
-    runs-on:
-      group: default
-      labels: warp-ubuntu-latest-x64-32x
+    runs-on: blacksmith-32vcpu-ubuntu-2404
     needs: create-release
     outputs:
       image_tag: ${{ steps.meta.outputs.version }}
@@ -102,6 +98,9 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Setup Blacksmith Docker Builder
+        uses: useblacksmith/setup-docker-builder@v1
+
       - name: Extract Docker metadata
         id: meta
         uses: docker/metadata-action@v5
@@ -112,7 +111,7 @@ jobs:
             type=raw,value=latest
 
       - name: Build and push Docker image
-        uses: WarpBuilds/build-push-action@v6
+        uses: useblacksmith/build-push-action@v2
         with:
           context: .
           file: ./Dockerfile-${{ matrix.upstream }}
@@ -128,9 +127,7 @@ jobs:
 
   security-scan:
     name: Security Scan (${{ matrix.upstream }})
-    runs-on:
-      group: default
-      labels: warp-ubuntu-latest-x64-4x
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     needs: [build]
     if: always() && needs.build.result == 'success'
     strategy:

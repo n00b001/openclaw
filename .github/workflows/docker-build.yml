@@ -1,5 +1,5 @@
 # =============================================================================
-# OpenClaw/PicoClaw/IronClaw Docker Build and Push Workflow
+# OpenClaw/PicoClaw/IronClaw/ZeroClaw Docker Build and Push Workflow
 # =============================================================================
 # PR Flow:
 #   pre-commit → python-tests → build → smoke-test → security-scan → artifacts
@@ -47,9 +47,7 @@ permissions:
 jobs:
   detect-changes:
     name: Detect Changes
-    runs-on:
-      group: default
-      labels: warp-ubuntu-latest-x64-2x
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     outputs:
       upstreams: ${{ steps.detect.outputs.upstreams }}
       any_changes: ${{ steps.detect.outputs.any_changes }}
@@ -172,9 +170,7 @@ jobs:
 
   pre-commit:
     name: Pre-Commit Checks
-    runs-on:
-      group: default
-      labels: warp-ubuntu-latest-x64-2x
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -187,7 +183,7 @@ jobs:
           python-version: '3.11'
 
       - name: Cache pre-commit environment
-        uses: WarpBuilds/cache@v1
+        uses: actions/cache@v4
         with:
           path: ~/.cache/pre-commit
           key: pre-commit-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}
@@ -202,9 +198,7 @@ jobs:
 
   python-tests:
     name: Python Tests
-    runs-on:
-      group: default
-      labels: warp-ubuntu-latest-x64-4x
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -225,9 +219,7 @@ jobs:
 
   check-pr-status:
     name: Check PR Status
-    runs-on:
-      group: default
-      labels: warp-ubuntu-latest-x64-2x
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     if: github.event_name == 'push'
     outputs:
       can_skip_build: ${{ steps.check.outputs.can_skip_build }}
@@ -290,9 +282,7 @@ jobs:
 
   build:
     name: Build (${{ matrix.upstream }})
-    runs-on:
-      group: default
-      labels: warp-ubuntu-latest-x64-32x
+    runs-on: blacksmith-32vcpu-ubuntu-2404
     needs: [detect-changes, pre-commit, python-tests, check-pr-status]
     if: |
       always() &&
@@ -419,10 +409,8 @@ jobs:
           echo "upstream_tag=$UPSTREAM_TAG" >> $GITHUB_OUTPUT
           echo "upstream_version=$UPSTREAM_VERSION" >> $GITHUB_OUTPUT
 
-      - name: Configure WarpBuild Docker Builder
-        uses: WarpBuilds/docker-configure@v1
-        with:
-          profile-name: "polyclaw-builder"
+      - name: Setup Blacksmith Docker Builder
+        uses: useblacksmith/setup-docker-builder@v1
 
       - name: Extract Docker metadata
         id: meta
@@ -440,7 +428,7 @@ jobs:
             upstream=${{ matrix.upstream }}
 
       - name: Build Docker image
-        uses: docker/build-push-action@v6
+        uses: useblacksmith/build-push-action@v2
         with:
           context: .
           file: ./Dockerfile-${{ matrix.upstream }}
@@ -465,9 +453,7 @@ jobs:
 
   smoke-test:
     name: Smoke Test (${{ matrix.upstream }})
-    runs-on:
-      group: default
-      labels: warp-ubuntu-latest-x64-8x
+    runs-on: blacksmith-8vcpu-ubuntu-2404
     needs: [detect-changes, build, check-pr-status]
     if: |
       always() &&
@@ -510,9 +496,7 @@ jobs:
 
   security-scan:
     name: Security Scan (${{ matrix.upstream }})
-    runs-on:
-      group: default
-      labels: warp-ubuntu-latest-x64-4x
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     needs: [detect-changes, build, check-pr-status]
     if: |
       always() &&
@@ -562,9 +546,7 @@ jobs:
 
   download-pr-artifacts:
     name: Download PR Artifacts (${{ matrix.upstream }})
-    runs-on:
-      group: default
-      labels: warp-ubuntu-latest-x64-2x
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     needs: [detect-changes, pre-commit, python-tests, check-pr-status]
     if: |
       always() &&
@@ -594,9 +576,7 @@ jobs:
 
   push-to-ghcr:
     name: Push to GHCR (${{ matrix.upstream }})
-    runs-on:
-      group: default
-      labels: warp-ubuntu-latest-x64-2x
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     needs: [detect-changes, pre-commit, python-tests, build, smoke-test, security-scan, check-pr-status, download-pr-artifacts]
     if: |
       always() &&
