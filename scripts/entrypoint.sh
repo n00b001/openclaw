@@ -237,7 +237,7 @@ NGINX_EOF
     fi
     # Ensure nginx can read the htpasswd file
     chown ${UPSTREAM}:${UPSTREAM} /etc/nginx/.htpasswd 2>/dev/null || true
-    chmod 644 /etc/nginx/.htpasswd
+    chmod 644 /etc/nginx/.htpasswd 2>/dev/null || true
 
     # Test nginx config
     nginx -t || log_warn "Nginx configuration test had issues"
