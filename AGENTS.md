@@ -19,12 +19,24 @@ This document provides guidelines for AI agents working on this repository.
 
 This workflow is NON-NEGOTIABLE for all code changes.
 
-**IMPORTANT**: 
+**IMPORTANT**:
 - Always use worktrees for isolation
 - Always create a PR for every change
 - Always monitor PR status until CI succeeds
+- Fix any failing checks immediately
 - Always merge after approval
 - Always verify post-merge actions succeed
+
+### PR Monitoring (CRITICAL)
+After creating a PR, you **MUST** monitor it until all checks pass:
+
+1. Check status: `gh pr checks <pr-number>`
+2. View failures: `gh run view <run-id> --log-failed`
+3. Fix issues locally and push new commits
+4. Repeat until all checks pass
+5. Only then wait for approval to merge
+
+**Never abandon a PR with failing checks.**
 
 **Project Memory**: Store project-specific knowledge in MEMORY.md (patterns, gotchas, reference info).
 
