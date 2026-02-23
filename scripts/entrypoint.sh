@@ -225,7 +225,8 @@ server {
 }
 NGINX_EOF
 
-    # Create htpasswd file
+    # Create htpasswd file (ensure we can write to it)
+    rm -f /etc/nginx/.htpasswd 2>/dev/null || true
     if [ -n "${AUTH_PASSWORD:-}" ]; then
         AUTH_USERNAME="${AUTH_USERNAME:-admin}"
         echo "$AUTH_USERNAME:$(openssl passwd -apr1 "$AUTH_PASSWORD")" > /etc/nginx/.htpasswd
