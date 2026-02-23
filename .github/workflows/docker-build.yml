@@ -1,5 +1,5 @@
 # =============================================================================
-# OpenClaw/PicoClaw/IronClaw Docker Build and Push Workflow
+# OpenClaw/PicoClaw/IronClaw/ZeroClaw Docker Build and Push Workflow
 # =============================================================================
 # PR Flow:
 #   pre-commit → python-tests → build → smoke-test → security-scan → artifacts
@@ -198,7 +198,7 @@ jobs:
 
   python-tests:
     name: Python Tests
-    runs-on: blacksmith-32vcpu-ubuntu-2404
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -409,10 +409,7 @@ jobs:
           echo "upstream_tag=$UPSTREAM_TAG" >> $GITHUB_OUTPUT
           echo "upstream_version=$UPSTREAM_VERSION" >> $GITHUB_OUTPUT
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Setup Blacksmith Builder
+      - name: Setup Blacksmith Docker Builder
         uses: useblacksmith/setup-docker-builder@v1
 
       - name: Extract Docker metadata
@@ -456,7 +453,7 @@ jobs:
 
   smoke-test:
     name: Smoke Test (${{ matrix.upstream }})
-    runs-on: blacksmith-32vcpu-ubuntu-2404
+    runs-on: blacksmith-8vcpu-ubuntu-2404
     needs: [detect-changes, build, check-pr-status]
     if: |
       always() &&
@@ -499,7 +496,7 @@ jobs:
 
   security-scan:
     name: Security Scan (${{ matrix.upstream }})
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     needs: [detect-changes, build, check-pr-status]
     if: |
       always() &&
