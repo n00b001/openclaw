@@ -165,7 +165,13 @@ When adding new env vars to `configure.js`, **always add them to the whitelist**
 
 - **Repository**: `xfanth/polyclaw` (formerly `xfanth/openclaw`)
 - **Docker Images**: `ghcr.io/xfanth/{upstream}` where upstream is `openclaw`, `picoclaw`, `ironclaw`, or `zeroclaw`
-- **Image tags**: `xfanth_main`, `oc_main`, `pc_main`, `ic_main`, `zc_main`, or version tags like `v2026.2.1`
+- **Image tags**: `{upstream}_main` format (e.g., `openclaw_main`, `picoclaw_main`, `ironclaw_main`, `zeroclaw_main`)
+- **Full image names**:
+  - `ghcr.io/xfanth/zeroclaw:zeroclaw_main`
+  - `ghcr.io/xfanth/openclaw:openclaw_main`
+  - `ghcr.io/xfanth/ironclaw:ironclaw_main`
+  - `ghcr.io/xfanth/picoclaw:picoclaw_main`
+- **Note**: The `:latest` tag does NOT exist - always use `{upstream}_main` tags
 
 When renaming a repository:
 1. Update README.md badge URLs
