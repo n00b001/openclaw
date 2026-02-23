@@ -132,6 +132,10 @@ if [ "$(id -u)" = "0" ]; then
 
     # Configure nginx while still root (requires write access to /etc/nginx)
     log_info "Configuring Nginx..."
+    # Remove any existing config to avoid "duplicate default server" errors
+    rm -f /etc/nginx/sites-enabled/* 2>/dev/null || true
+    rm -f /etc/nginx/conf.d/*.conf 2>/dev/null || true
+    
     tee "/etc/nginx/conf.d/${UPSTREAM}.conf" > /dev/null << NGINX_EOF
 # $UPSTREAM Nginx Configuration
 
@@ -158,6 +162,17 @@ server {
     proxy_read_timeout 60s;
 
     location /healthz {
+        proxy_pass http://${UPSTREAM}_gateway;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        access_log off;
+    }
+
+    # Alternative health endpoint for zeroclaw
+    location /health {
         proxy_pass http://${UPSTREAM}_gateway;
         proxy_http_version 1.1;
         proxy_set_header Host \$host;
@@ -195,7 +210,10 @@ server {
     }
 
     location /browser/ {
-        proxy_pass http://browser:6080/vnc.html;
+        # Use resolver to avoid nginx failing at startup if browser is not available
+        resolver 127.0.0.11 valid=30s;
+        set \$browser_host "browser";
+        proxy_pass http://\$browser_host:6080/vnc.html;
         proxy_http_version 1.1;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
@@ -207,10 +225,20 @@ server {
         proxy_send_timeout 86400s;
         proxy_buffering off;
         proxy_cache off;
+        # Return 503 if browser is not available instead of failing nginx startup
+        proxy_intercept_errors on;
+        error_page 502 503 504 = @browser_unavailable;
+    }
+
+    location @browser_unavailable {
+        return 503 "Browser service not available. Start the browser container to use noVNC.";
     }
 
     location /websockify {
-        proxy_pass http://browser:6080/websockify;
+        # Use resolver to avoid nginx failing at startup if browser is not available
+        resolver 127.0.0.11 valid=30s;
+        set \$browser_host "browser";
+        proxy_pass http://\$browser_host:6080/websockify;
         proxy_http_version 1.1;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
@@ -225,7 +253,8 @@ server {
 }
 NGINX_EOF
 
-    # Create htpasswd file
+    # Create htpasswd file (ensure we can write to it)
+    rm -f /etc/nginx/.htpasswd 2>/dev/null || true
     if [ -n "${AUTH_PASSWORD:-}" ]; then
         AUTH_USERNAME="${AUTH_USERNAME:-admin}"
         echo "$AUTH_USERNAME:$(openssl passwd -apr1 "$AUTH_PASSWORD")" > /etc/nginx/.htpasswd
@@ -234,6 +263,9 @@ NGINX_EOF
         echo "" > /etc/nginx/.htpasswd
         log_warn "No AUTH_PASSWORD set - gateway will be open"
     fi
+    # Ensure nginx can read the htpasswd file (world-readable)
+    chmod 644 /etc/nginx/.htpasswd 2>/dev/null || true
+    chown ${UPSTREAM}:${UPSTREAM} /etc/nginx/.htpasswd 2>/dev/null || true
 
     # Test nginx config
     nginx -t || log_warn "Nginx configuration test had issues"
@@ -501,7 +533,7 @@ log_info "=== Troubleshooting Info ==="
 log_info "If you see 404/502 errors:"
 log_info "  1. Check gateway logs: docker logs <container> | grep -A 20 'zeroclaw'"
 log_info "  2. Verify port binding: docker exec <container> netstat -tlnp | grep $INTERNAL_GATEWAY_PORT"
-log_info "  3. Test internal endpoint: docker exec <container> curl -s http://127.0.0.1:$INTERNAL_GATEWAY_PORT/healthz"
+log_info "  3. Test internal endpoint: docker exec <container> curl -s http://127.0.0.1:$INTERNAL_GATEWAY_PORT/health"
 log_info ""
 
 exec supervisord -c "$STATE_DIR/supervisord.conf"

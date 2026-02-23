@@ -10,8 +10,15 @@
 # - Health checks and auto-restart
 #
 # Upstream Selection:
-#   Set UPSTREAM=openclaw or UPSTREAM=picoclaw in .env
-#   The service name and container name will adapt accordingly
+#   Option 1: Set UPSTREAM=openclaw|picoclaw|ironclaw|zeroclaw in .env
+#             This auto-selects the image and configures volumes correctly.
+#
+#   Option 2: Set OPENCLAW_IMAGE explicitly AND set UPSTREAM to match:
+#             OPENCLAW_IMAGE=ghcr.io/xfanth/zeroclaw:zeroclaw_main
+#             UPSTREAM=zeroclaw
+#
+#   IMPORTANT: When using OPENCLAW_IMAGE, you MUST also set UPSTREAM
+#   to ensure volume mounts use the correct paths.
 # =============================================================================
 
 services:
@@ -45,6 +52,11 @@ services:
 
     # Environment Variables
     environment:
+      # ---------------------------------------------------------------------
+      # Upstream Selection (IMPORTANT: must match OPENCLAW_IMAGE)
+      # ---------------------------------------------------------------------
+      - UPSTREAM=${UPSTREAM:-openclaw}
+
       # ---------------------------------------------------------------------
       # AI Providers (at least one required)
       # ---------------------------------------------------------------------
@@ -179,8 +191,12 @@ services:
       - NODE_ENV=production
 
     # Health check
+    # Note: Different upstreams use different health endpoints:
+    #   - openclaw/picoclaw/ironclaw: /healthz
+    #   - zeroclaw: /health
+    # Set HEALTH_CHECK_PATH in .env if using zeroclaw
     healthcheck:
-      test: ["CMD", "sh", "-c", "curl -f http://localhost:$${OPENCLAW_EXTERNAL_GATEWAY_PORT:-8080}/healthz"]
+      test: ["CMD", "sh", "-c", "curl -f http://localhost:$${OPENCLAW_EXTERNAL_GATEWAY_PORT:-8080}$${HEALTH_CHECK_PATH:-/healthz}"]
       interval: 30s
       timeout: 10s
       start_period: 60s
@@ -209,10 +225,11 @@ services:
       - ALL
     cap_add:
       - CHOWN
+      - DAC_OVERRIDE
+      - DAC_READ_SEARCH
       - SETGID
       - SETUID
       - AUDIT_WRITE
-      - DAC_READ_SEARCH
       - NET_BIND_SERVICE
       - NET_RAW
       - KILL
