@@ -161,6 +161,10 @@ server {
     listen $EXTERNAL_GATEWAY_PORT default_server;
     server_name _;
 
+    # DNS resolver for dynamic upstream resolution (Docker DNS)
+    # 127.0.0.11 is Docker's embedded DNS server
+    resolver 127.0.0.11 valid=30s ipv6=off;
+
     add_header X-Frame-Options "SAMEORIGIN" always;
     add_header X-Content-Type-Options "nosniff" always;
     add_header X-XSS-Protection "1; mode=block" always;
@@ -209,8 +213,11 @@ server {
         proxy_cache off;
     }
 
+    # Browser noVNC access (requires browser sidecar with noVNC on port 6080)
+    # Uses variable + resolver to defer DNS lookup so nginx starts even without browser sidecar
     location /browser/ {
-        proxy_pass http://browser:6080/vnc.html;
+        set \$browser_upstream browser:6080;
+        proxy_pass http://\$browser_upstream/vnc.html;
         proxy_http_version 1.1;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
@@ -224,8 +231,11 @@ server {
         proxy_cache off;
     }
 
+    # noVNC websockify endpoint
+    # Uses variable + resolver to defer DNS lookup so nginx starts even without browser sidecar
     location /websockify {
-        proxy_pass http://browser:6080/websockify;
+        set \$browser_upstream browser:6080;
+        proxy_pass http://\$browser_upstream/websockify;
         proxy_http_version 1.1;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
