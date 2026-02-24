@@ -1,20 +1,12 @@
 # =============================================================================
 # OpenClaw/PicoClaw/IronClaw/ZeroClaw Docker Build and Push Workflow
 # =============================================================================
-# PR Flow:
-#   pre-commit → python-tests → build → smoke-test → security-scan → artifacts
+# Simplified flow - no artifact passing between PR and post-merge:
+#   - PR: build → smoke-test → security-scan (artifacts uploaded for job handoff)
+#   - Main: build → smoke-test → security-scan → push-to-ghcr
 #
-# Main Flow (when PR merges or direct push to main):
-#   pre-commit → python-tests → check-pr-status
-#     - If PR artifacts exist AND PR was up-to-date with main:
-#       → download artifacts → push to GHCR (no re-test)
-#     - Else:
-#       → build → smoke-test → security-scan → push to GHCR
-#
-# This ensures:
-#   - Images only pushed to GHCR after tested AND merged to main
-#   - PRs upload artifacts (not pushed to GHCR)
-#   - Only rebuild if necessary (no artifacts or PR was outdated)
+# Docker layer caching via Blacksmith makes rebuilds fast (2-40x improvement),
+# so we don't need slow artifact downloads from GitHub storage.
 # =============================================================================
 
 name: Docker Build and Push
@@ -80,7 +72,6 @@ jobs:
           echo "$CHANGED_FILES"
 
           # Paths that affect ALL upstreams (common infrastructure)
-          # Note: scripts/ is NOT here because configure-{upstream}.js is upstream-specific
           COMMON_PATHS=".github/workflows/ docker-compose nginx.conf lib/ config/ .dockerignore"
 
           # Check if base Dockerfile or base configure.js changed (builds all)
@@ -109,47 +100,24 @@ jobs:
 
           # Determine which upstreams to build
           if [ "$BUILD_ALL" = "true" ]; then
-            # TODO: Re-enable openclaw, picoclaw, ironclaw when ready
             echo "upstreams=[\"zeroclaw\"]" >> $GITHUB_OUTPUT
             echo "any_changes=true" >> $GITHUB_OUTPUT
             echo "Building zeroclaw only (others temporarily disabled)"
             exit 0
           fi
 
-          # Check upstream-specific files (Dockerfile-{upstream} or version tracking files)
-          # TODO: Re-enable openclaw, picoclaw, ironclaw when ready
-          # BUILD_OPENCLAW="false"
-          # BUILD_PICOCLAW="false"
-          # BUILD_IRONCLAW="false"
+          # Check upstream-specific files
           BUILD_ZEROCLAW="false"
 
           for file in $CHANGED_FILES; do
             case "$file" in
-              # Dockerfile-openclaw|scripts/configure-openclaw.js|.openclaw-*|openclaw-*) BUILD_OPENCLAW="true" ;;
-              # Dockerfile-picoclaw|scripts/configure-picoclaw.js|.picoclaw-*|picoclaw-*) BUILD_PICOCLAW="true" ;;
-              # Dockerfile-ironclaw|scripts/configure-ironclaw.js|.ironclaw-*|ironclaw-*) BUILD_IRONCLAW="true" ;;
               Dockerfile-zeroclaw|scripts/configure-zeroclaw.js|.zeroclaw-*|zeroclaw-*) BUILD_ZEROCLAW="true" ;;
             esac
           done
 
           # Build JSON array of upstreams
-          # TODO: Re-enable openclaw, picoclaw, ironclaw when ready
           FIRST="true"
           UPSTREAMS_JSON="["
-          # if [ "$BUILD_OPENCLAW" = "true" ]; then
-          #   UPSTREAMS_JSON="${UPSTREAMS_JSON}\"openclaw\""
-          #   FIRST="false"
-          # fi
-          # if [ "$BUILD_PICOCLAW" = "true" ]; then
-          #   [ "$FIRST" = "false" ] && UPSTREAMS_JSON="${UPSTREAMS_JSON},"
-          #   UPSTREAMS_JSON="${UPSTREAMS_JSON}\"picoclaw\""
-          #   FIRST="false"
-          # fi
-          # if [ "$BUILD_IRONCLAW" = "true" ]; then
-          #   [ "$FIRST" = "false" ] && UPSTREAMS_JSON="${UPSTREAMS_JSON},"
-          #   UPSTREAMS_JSON="${UPSTREAMS_JSON}\"ironclaw\""
-          #   FIRST="false"
-          # fi
           if [ "$BUILD_ZEROCLAW" = "true" ]; then
             [ "$FIRST" = "false" ] && UPSTREAMS_JSON="${UPSTREAMS_JSON},"
             UPSTREAMS_JSON="${UPSTREAMS_JSON}\"zeroclaw\""
@@ -217,94 +185,19 @@ jobs:
       - name: Run unit tests
         run: uv run pytest tests/unit -v
 
-  check-pr-status:
-    name: Check PR Status
-    runs-on: blacksmith-2vcpu-ubuntu-2404
-    if: github.event_name == 'push'
-    outputs:
-      can_skip_build: ${{ steps.check.outputs.can_skip_build }}
-      pr_run_id: ${{ steps.check.outputs.pr_run_id }}
-    steps:
-      - name: Check if merge came from a tested PR
-        id: check
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          COMMIT_SHA="${{ github.sha }}"
-          echo "Checking if commit $COMMIT_SHA came from a merged PR..."
-
-          PR_INFO=$(gh pr list \
-            --repo "${{ github.repository }}" \
-            --state merged \
-            --json number,mergeCommit,headRefName,headRefOid \
-            --jq ".[] | select(.mergeCommit.oid == \"$COMMIT_SHA\") | {number, headBranch: .headRefName, headSha: .headRefOid}" | head -1)
-
-          if [ -z "$PR_INFO" ]; then
-            echo "No merged PR found (direct push to main)"
-            echo "can_skip_build=false" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-
-          echo "Found merged PR: $PR_INFO"
-          PR_HEAD_SHA=$(echo "$PR_INFO" | jq -r '.headSha')
-
-          WORKFLOW_RUNS=$(gh run list \
-            --repo "${{ github.repository }}" \
-            --workflow "docker-build.yml" \
-            --event "pull_request" \
-            --status success \
-            --limit 50 \
-            --json headSha,conclusion,databaseId,displayTitle)
-
-          MATCHING_RUN=$(echo "$WORKFLOW_RUNS" | \
-            jq --arg sha "$PR_HEAD_SHA" \
-            'first(sort_by(.databaseId) | reverse | .[] | select(.headSha == $sha))')
-
-          if [ -z "$MATCHING_RUN" ]; then
-            echo "No successful PR workflow runs found with matching head SHA"
-            echo "can_skip_build=false" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-
-          RUN_ID=$(echo "$MATCHING_RUN" | jq -r '.databaseId')
-          echo "Found successful run with matching SHA: $RUN_ID"
-
-          ARTIFACTS=$(gh api repos/${{ github.repository }}/actions/runs/$RUN_ID/artifacts --jq '.artifacts | length')
-          if [ "$ARTIFACTS" -eq 0 ]; then
-            echo "Run has no artifacts"
-            echo "can_skip_build=false" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-
-          echo "Found run $RUN_ID with $ARTIFACTS artifacts matching PR head SHA $PR_HEAD_SHA"
-          echo "can_skip_build=true" >> $GITHUB_OUTPUT
-          echo "pr_run_id=$RUN_ID" >> $GITHUB_OUTPUT
-
   build:
     name: Build (${{ matrix.upstream }})
     runs-on: blacksmith-32vcpu-ubuntu-2404
-    needs: [detect-changes, pre-commit, python-tests, check-pr-status]
+    needs: [detect-changes, pre-commit, python-tests]
     if: |
       always() &&
       needs.pre-commit.result == 'success' &&
       needs.python-tests.result == 'success' &&
-      needs.detect-changes.outputs.any_changes == 'true' &&
-      (github.event_name == 'pull_request' ||
-       (needs.check-pr-status.result == 'success' && needs.check-pr-status.outputs.can_skip_build != 'true'))
+      needs.detect-changes.outputs.any_changes == 'true'
     strategy:
       matrix:
         upstream: ${{ fromJson(needs.detect-changes.outputs.upstreams) }}
         include:
-          # TODO: Re-enable when ready
-          # - upstream: openclaw
-          #   github_owner: openclaw
-          #   github_repo: openclaw
-          # - upstream: picoclaw
-          #   github_owner: sipeed
-          #   github_repo: picoclaw
-          # - upstream: ironclaw
-          #   github_owner: nearai
-          #   github_repo: ironclaw
           - upstream: zeroclaw
             github_owner: zeroclaw-labs
             github_repo: zeroclaw
@@ -327,21 +220,6 @@ jobs:
 
           # Determine upstream owner/repo and prefix
           case "$UPSTREAM" in
-            openclaw)
-              PREFIX="oc"
-              OWNER="openclaw"
-              REPO="openclaw"
-              ;;
-            picoclaw)
-              PREFIX="pc"
-              OWNER="sipeed"
-              REPO="picoclaw"
-              ;;
-            ironclaw)
-              PREFIX="ic"
-              OWNER="nearai"
-              REPO="ironclaw"
-              ;;
             zeroclaw)
               PREFIX="zc"
               OWNER="zeroclaw-labs"
@@ -454,12 +332,10 @@ jobs:
   smoke-test:
     name: Smoke Test (${{ matrix.upstream }})
     runs-on: blacksmith-8vcpu-ubuntu-2404
-    needs: [detect-changes, build, check-pr-status]
+    needs: [detect-changes, build]
     if: |
       always() &&
-      needs.build.result == 'success' &&
-      (github.event_name == 'pull_request' ||
-       (needs.check-pr-status.result == 'success' && needs.check-pr-status.outputs.can_skip_build != 'true'))
+      needs.build.result == 'success'
     strategy:
       matrix:
         upstream: ${{ fromJson(needs.detect-changes.outputs.upstreams) }}
@@ -497,12 +373,10 @@ jobs:
   security-scan:
     name: Security Scan (${{ matrix.upstream }})
     runs-on: blacksmith-4vcpu-ubuntu-2404
-    needs: [detect-changes, build, check-pr-status]
+    needs: [detect-changes, build]
     if: |
       always() &&
-      needs.build.result == 'success' &&
-      (github.event_name == 'pull_request' ||
-       (needs.check-pr-status.result == 'success' && needs.check-pr-status.outputs.can_skip_build != 'true'))
+      needs.build.result == 'success'
     strategy:
       matrix:
         upstream: ${{ fromJson(needs.detect-changes.outputs.upstreams) }}
@@ -544,50 +418,19 @@ jobs:
           sarif_file: 'trivy-results-${{ matrix.upstream }}.sarif'
           category: ${{ matrix.upstream }}
 
-  download-pr-artifacts:
-    name: Download PR Artifacts (${{ matrix.upstream }})
-    runs-on: blacksmith-2vcpu-ubuntu-2404
-    needs: [detect-changes, pre-commit, python-tests, check-pr-status]
-    if: |
-      always() &&
-      needs.pre-commit.result == 'success' &&
-      needs.python-tests.result == 'success' &&
-      needs.check-pr-status.result == 'success' &&
-      needs.check-pr-status.outputs.can_skip_build == 'true' &&
-      needs.detect-changes.outputs.any_changes == 'true'
-    strategy:
-      matrix:
-        upstream: ${{ fromJson(needs.detect-changes.outputs.upstreams) }}
-    steps:
-      - name: Download artifact from PR run
-        uses: actions/download-artifact@v4
-        with:
-          name: docker-image-${{ matrix.upstream }}
-          path: /tmp
-          run-id: ${{ needs.check-pr-status.outputs.pr_run_id }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Re-upload artifact for downstream jobs
-        uses: actions/upload-artifact@v4
-        with:
-          name: docker-image-${{ matrix.upstream }}
-          path: /tmp/docker-image-${{ matrix.upstream }}.tar
-          retention-days: 1
-
   push-to-ghcr:
     name: Push to GHCR (${{ matrix.upstream }})
     runs-on: blacksmith-2vcpu-ubuntu-2404
-    needs: [detect-changes, pre-commit, python-tests, build, smoke-test, security-scan, check-pr-status, download-pr-artifacts]
+    needs: [detect-changes, pre-commit, python-tests, build, smoke-test, security-scan]
     if: |
       always() &&
       github.event_name == 'push' &&
       needs.pre-commit.result == 'success' &&
       needs.python-tests.result == 'success' &&
-      needs.detect-changes.outputs.any_changes == 'true' &&
-      (
-        (needs.build.result == 'success' && needs.smoke-test.result == 'success' && needs.security-scan.result == 'success') ||
-        (needs.download-pr-artifacts.result == 'success')
-      )
+      needs.build.result == 'success' &&
+      needs.smoke-test.result == 'success' &&
+      needs.security-scan.result == 'success' &&
+      needs.detect-changes.outputs.any_changes == 'true'
     strategy:
       matrix:
         upstream: ${{ fromJson(needs.detect-changes.outputs.upstreams) }}
@@ -618,21 +461,6 @@ jobs:
 
           # Determine upstream owner/repo and prefix
           case "$UPSTREAM" in
-            openclaw)
-              PREFIX="oc"
-              OWNER="openclaw"
-              REPO="openclaw"
-              ;;
-            picoclaw)
-              PREFIX="pc"
-              OWNER="sipeed"
-              REPO="picoclaw"
-              ;;
-            ironclaw)
-              PREFIX="ic"
-              OWNER="nearai"
-              REPO="ironclaw"
-              ;;
             zeroclaw)
               PREFIX="zc"
               OWNER="zeroclaw-labs"
@@ -653,44 +481,33 @@ jobs:
           fi
 
           # Determine upstream version (for Dockerfile) and tag
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            LATEST_TAG=$(curl -s https://api.github.com/repos/${OWNER}/${REPO}/releases/latest | jq -r '.tag_name // empty')
-            if [ -n "$LATEST_TAG" ] && [ "$LATEST_TAG" != "null" ]; then
-              UPSTREAM_VERSION="$LATEST_TAG"
-              UPSTREAM_TAG="${UPSTREAM}_$LATEST_TAG"
-            else
-              UPSTREAM_VERSION="${PREFIX}_main"
-              UPSTREAM_TAG="${UPSTREAM}_main"
-            fi
-          else
-            BASE_COMMIT="${{ github.event.before }}"
-            TAGGED_CHANGED=$(git diff --name-only $BASE_COMMIT HEAD 2>/dev/null | grep -q "^${TAGGED_FILE}$" && echo "true" || echo "false")
-            MAIN_CHANGED=$(git diff --name-only $BASE_COMMIT HEAD 2>/dev/null | grep -q "^${MAIN_FILE}$" && echo "true" || echo "false")
+          BASE_COMMIT="${{ github.event.before }}"
+          TAGGED_CHANGED=$(git diff --name-only $BASE_COMMIT HEAD 2>/dev/null | grep -q "^${TAGGED_FILE}$" && echo "true" || echo "false")
+          MAIN_CHANGED=$(git diff --name-only $BASE_COMMIT HEAD 2>/dev/null | grep -q "^${MAIN_FILE}$" && echo "true" || echo "false")
 
-            if [ "$TAGGED_CHANGED" = "true" ]; then
-              TRACKED_COMMIT=$(cat "$TAGGED_FILE" 2>/dev/null || echo "")
-              if [ -n "$TRACKED_COMMIT" ]; then
-                TAG=$(curl -s "https://api.github.com/repos/${OWNER}/${REPO}/git/refs/tags" | \
-                  jq -r --arg commit "$TRACKED_COMMIT" '.[] | select(.object.sha == $commit or .object.object.sha == $commit) | .ref' | \
-                  sed 's|refs/tags/||' | head -n1)
-              fi
-              if [ -z "$TAG" ]; then
-                TAG=$(curl -s "https://api.github.com/repos/${OWNER}/${REPO}/releases/latest" | jq -r '.tag_name // empty')
-              fi
-              if [ -n "$TAG" ] && [ "$TAG" != "null" ]; then
-                UPSTREAM_VERSION="$TAG"
-                UPSTREAM_TAG="${UPSTREAM}_$TAG"
-              else
-                UPSTREAM_VERSION="${PREFIX}_main"
-                UPSTREAM_TAG="${UPSTREAM}_main"
-              fi
-            elif [ "$MAIN_CHANGED" = "true" ]; then
-              UPSTREAM_VERSION="${PREFIX}_main"
-              UPSTREAM_TAG="${UPSTREAM}_main"
+          if [ "$TAGGED_CHANGED" = "true" ]; then
+            TRACKED_COMMIT=$(cat "$TAGGED_FILE" 2>/dev/null || echo "")
+            if [ -n "$TRACKED_COMMIT" ]; then
+              TAG=$(curl -s "https://api.github.com/repos/${OWNER}/${REPO}/git/refs/tags" | \
+                jq -r --arg commit "$TRACKED_COMMIT" '.[] | select(.object.sha == $commit or .object.object.sha == $commit) | .ref' | \
+                sed 's|refs/tags/||' | head -n1)
+            fi
+            if [ -z "$TAG" ]; then
+              TAG=$(curl -s "https://api.github.com/repos/${OWNER}/${REPO}/releases/latest" | jq -r '.tag_name // empty')
+            fi
+            if [ -n "$TAG" ] && [ "$TAG" != "null" ]; then
+              UPSTREAM_VERSION="$TAG"
+              UPSTREAM_TAG="${UPSTREAM}_$TAG"
             else
               UPSTREAM_VERSION="${PREFIX}_main"
               UPSTREAM_TAG="${UPSTREAM}_main"
             fi
+          elif [ "$MAIN_CHANGED" = "true" ]; then
+            UPSTREAM_VERSION="${PREFIX}_main"
+            UPSTREAM_TAG="${UPSTREAM}_main"
+          else
+            UPSTREAM_VERSION="${PREFIX}_main"
+            UPSTREAM_TAG="${UPSTREAM}_main"
           fi
 
           # Output all values
