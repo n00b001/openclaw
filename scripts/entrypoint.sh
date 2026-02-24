@@ -130,6 +130,10 @@ if [ "$(id -u)" = "0" ]; then
         # Also fix any workspace subdirectories that may have been created by interactive sessions
         chown -R "$UPSTREAM:$UPSTREAM" "${OPENCLAW_WORKSPACE_DIR:-/data/workspace}" 2>/dev/null || true
     fi
+    # ZeroClaw uses /root/.zeroclaw for config, so we need to chown it
+    if [ "$UPSTREAM" = "zeroclaw" ]; then
+        chown -R "$UPSTREAM:$UPSTREAM" /root/.zeroclaw 2>/dev/null || true
+    fi
     chown -R "$UPSTREAM:$UPSTREAM" "/var/log/$UPSTREAM" 2>/dev/null || true
     chown -R "$UPSTREAM:$UPSTREAM" /var/log/supervisor 2>/dev/null || true
     chown -R "$UPSTREAM:$UPSTREAM" /var/lib/nginx 2>/dev/null || true
