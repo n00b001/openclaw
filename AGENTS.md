@@ -215,3 +215,4 @@ When running interactive commands via `docker exec`:
 chown -R 10000:10000 /path/to/bind-mount
 ```
 User ID 10000 is the `zeroclaw` user inside the container.
+
