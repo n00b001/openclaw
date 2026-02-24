@@ -146,6 +146,7 @@ if [ "$(id -u)" = "0" ]; then
     log_info "Configuring Nginx..."
     # Remove any existing site config from Dockerfile to avoid duplicate port binding
     rm -f "/etc/nginx/sites-enabled/${UPSTREAM}" 2>/dev/null || true
+    rm -f "/etc/nginx/sites-available/${UPSTREAM}" 2>/dev/null || true
     # Ensure conf.d directory exists and is writable
     mkdir -p /etc/nginx/conf.d 2>/dev/null || true
     chmod 755 /etc/nginx/conf.d 2>/dev/null || true
