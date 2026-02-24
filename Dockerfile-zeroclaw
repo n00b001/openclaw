@@ -190,9 +190,10 @@ RUN echo "Moving ZeroClaw binary..." && \
     chmod +x /opt/zeroclaw/zeroclaw && \
     echo "ZeroClaw binary moved to /opt/zeroclaw/zeroclaw"
 
-# Create CLI wrapper
+# Create CLI wrapper - sets HOME=/data so zeroclaw finds config at /data/.zeroclaw/
 # hadolint ignore=SC2016
 RUN printf '%s\n' '#!/usr/bin/env bash' \
+    'export HOME=/data' \
     'exec /opt/zeroclaw/zeroclaw "$@"' > /usr/local/bin/${UPSTREAM} \
     && chmod +x /usr/local/bin/${UPSTREAM}
 

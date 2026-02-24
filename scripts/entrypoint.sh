@@ -108,15 +108,27 @@ if [ "$(id -u)" = "0" ]; then
 
     # Create required directories first (before chown)
     STATE_DIR="${OPENCLAW_STATE_DIR:-$DEFAULT_STATE_DIR}"
+    WORKSPACE_DIR="${OPENCLAW_WORKSPACE_DIR:-/data/workspace}"
     mkdir -p "$STATE_DIR/identity" 2>/dev/null || true
     mkdir -p "$STATE_DIR/credentials" 2>/dev/null || true
-    mkdir -p "${OPENCLAW_WORKSPACE_DIR:-/data/workspace}" 2>/dev/null || true
+    mkdir -p "$WORKSPACE_DIR" 2>/dev/null || true
+    # Create zeroclaw workspace subdirectories (needed for model cache, state, etc.)
+    if [ "$UPSTREAM" = "zeroclaw" ]; then
+        mkdir -p "$WORKSPACE_DIR/state" 2>/dev/null || true
+        mkdir -p "$WORKSPACE_DIR/memory" 2>/dev/null || true
+        mkdir -p "$WORKSPACE_DIR/sessions" 2>/dev/null || true
+        mkdir -p "$WORKSPACE_DIR/skills" 2>/dev/null || true
+        mkdir -p "$WORKSPACE_DIR/cron" 2>/dev/null || true
+    fi
     mkdir -p "/var/log/$UPSTREAM" 2>/dev/null || true
 
     # Fix ownership - warn if chown fails (common with restrictive bind mounts)
     if ! chown -R "$UPSTREAM:$UPSTREAM" /data 2>/dev/null; then
         log_warn "Could not change ownership of /data - bind mount may have restrictive permissions"
         log_warn "If you see permission errors, fix ownership on the host: chown -R 10000:10000 <bind-mount-path>"
+    else
+        # Also fix any workspace subdirectories that may have been created by interactive sessions
+        chown -R "$UPSTREAM:$UPSTREAM" "${OPENCLAW_WORKSPACE_DIR:-/data/workspace}" 2>/dev/null || true
     fi
     chown -R "$UPSTREAM:$UPSTREAM" "/var/log/$UPSTREAM" 2>/dev/null || true
     chown -R "$UPSTREAM:$UPSTREAM" /var/log/supervisor 2>/dev/null || true
