@@ -146,6 +146,7 @@ if [ "$(id -u)" = "0" ]; then
     log_info "Configuring Nginx..."
     # Remove any existing nginx configs to avoid conflicts
     rm -f "/etc/nginx/sites-enabled/${UPSTREAM}" 2>/dev/null || true
+    rm -f "/etc/nginx/sites-enabled/default" 2>/dev/null || true
     rm -f "/etc/nginx/conf.d/${UPSTREAM}.conf" 2>/dev/null || true
     # Write config to sites-available (standard Debian location)
     tee "/etc/nginx/sites-available/${UPSTREAM}" > /dev/null << NGINX_EOF
