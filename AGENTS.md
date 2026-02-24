@@ -133,24 +133,11 @@ After approval, merge the pull request and delete the branch:
 
 ## GitHub Actions Workflow Dependencies
 
-- **Critical: Job dependency race conditions**:
-  - Jobs with `needs:` dependencies can access outputs before the dependency job fully completes
-  - GitHub Actions has a delay between job completion and output availability
-  - If dependent jobs start early, they fail with errors like "State not set"
-  - **Don't rely on outputs from other jobs** for critical decisions like whether to skip builds
-  - **Pattern**: Put the check logic inside each job itself, making it self-contained
+- **Sticky disks for artifact passing**: The workflow uses `useblacksmith/stickydisk@v1` to pass Docker images between jobs in ~3 seconds (vs 44+ minutes for GitHub artifacts). Each upstream gets its own sticky disk keyed as `{repo}-{upstream}-docker-image`.
 
-- **When fixing workflow dependency issues**:
-  - Look for jobs that depend on outputs from other jobs
-  - Add a sleep/delay or check the condition inside the dependent job
-  - Better yet: Make each job independently determine its behavior without needing external outputs
-  - Document the dependency pattern in MEMORY.md so future agents understand the issue
+- **Docker layer caching**: The workflow uses `useblacksmith/setup-docker-builder@v1` and `useblacksmith/build-push-action@v2` to cache Docker layers on Blacksmith's NVMe storage (2-40x build improvement).
 
-- **Correct workflow pattern for PR artifact reuse**:
-  - Build jobs should check internally: "Is this from a PR merge with available artifacts?"
-  - If yes: Skip build, download artifacts from PR run
-  - If no: Build fresh images
-  - This avoids race conditions where jobs access outputs before they're set
+- **Simplified workflow**: Both PR and post-merge run the same build → smoke-test → security-scan flow. Post-merge adds a push-to-ghcr step.
 
 ```bash
 gh pr merge
