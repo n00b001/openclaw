@@ -229,8 +229,8 @@ server {
     # Browser noVNC access (requires browser sidecar with noVNC on port 6080)
     # Uses variable + resolver to defer DNS lookup so nginx starts even without browser sidecar
     location /browser/ {
-        set $browser_upstream browser:6080;
-        proxy_pass http://$browser_upstream/vnc.html;
+        set \$browser_upstream browser:6080;
+        proxy_pass http://\$browser_upstream/vnc.html;
         proxy_http_version 1.1;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
@@ -254,8 +254,8 @@ server {
     # noVNC websockify endpoint
     # Uses variable + resolver to defer DNS lookup so nginx starts even without browser sidecar
     location /websockify {
-        set $browser_upstream browser:6080;
-        proxy_pass http://$browser_upstream/websockify;
+        set \$browser_upstream browser:6080;
+        proxy_pass http://\$browser_upstream/websockify;
         proxy_http_version 1.1;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
