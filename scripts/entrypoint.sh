@@ -147,7 +147,8 @@ if [ "$(id -u)" = "0" ]; then
     # Remove any existing nginx configs to avoid port conflicts
     rm -f "/etc/nginx/sites-enabled/${UPSTREAM}" 2>/dev/null || true
     rm -f "/etc/nginx/conf.d/${UPSTREAM}.conf" 2>/dev/null || true
-    tee "/etc/nginx/conf.d/${UPSTREAM}.conf" > /dev/null << NGINX_EOF
+    # Write config to sites-available (standard Debian location)
+    tee "/etc/nginx/sites-available/${UPSTREAM}" > /dev/null << NGINX_EOF
 # $UPSTREAM Nginx Configuration
 
 upstream ${UPSTREAM}_gateway {
@@ -239,6 +240,11 @@ server {
     }
 }
 NGINX_EOF
+
+    # Create symlink in sites-enabled (standard Debian location)
+    ln -sf "/etc/nginx/sites-available/${UPSTREAM}" "/etc/nginx/sites-enabled/${UPSTREAM}"
+    # Ensure config is readable
+    chmod 644 "/etc/nginx/sites-available/${UPSTREAM}" 2>/dev/null || true
 
     # Create htpasswd file (ensure we can write to it)
     rm -f /etc/nginx/.htpasswd 2>/dev/null || true
