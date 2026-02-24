@@ -133,9 +133,11 @@ After approval, merge the pull request and delete the branch:
 
 ## GitHub Actions Workflow Dependencies
 
-- **Docker layer caching via Blacksmith**: The workflow uses `useblacksmith/setup-docker-builder@v1` and `useblacksmith/build-push-action@v2` to cache Docker layers on Blacksmith's NVMe storage. This makes rebuilds fast (2-40x improvement), so we don't need slow artifact downloads from GitHub storage between PR and post-merge runs.
+- **Sticky disks for artifact passing**: The workflow uses `useblacksmith/stickydisk@v1` to pass Docker images between jobs in ~3 seconds (vs 44+ minutes for GitHub artifacts). Each upstream gets its own sticky disk keyed as `{repo}-{upstream}-docker-image`.
 
-- **Simplified workflow**: Both PR and post-merge run the same build → smoke-test → security-scan flow. Post-merge adds a push-to-ghcr step. No artifact passing between runs.
+- **Docker layer caching**: The workflow uses `useblacksmith/setup-docker-builder@v1` and `useblacksmith/build-push-action@v2` to cache Docker layers on Blacksmith's NVMe storage (2-40x build improvement).
+
+- **Simplified workflow**: Both PR and post-merge run the same build → smoke-test → security-scan flow. Post-merge adds a push-to-ghcr step.
 
 ```bash
 gh pr merge
