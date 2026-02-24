@@ -119,17 +119,35 @@ git push -u origin feature/description-of-change
 ```
 
 ### Pull Request and Merge
+
 **CRITICAL: ALWAYS create a PR for every code change. NEVER push directly to main.**
 
-Create a pull request for review. Use the GitHub CLI:
+1. **Create PR**:
+   ```bash
+   gh pr create --title "Description" --body "Details"
+   ```
 
-```bash
-gh pr create --title "Description" --body "Details"
-```
+2. **Monitor PR checks until they pass**:
+   ```bash
+   gh pr checks <pr-number>
+   ```
+   - If checks fail, view logs: `gh run view <run-id> --log-failed`
+   - Fix issues locally, commit, and push
+   - Repeat until all checks pass
 
-**IMPORTANT: Do NOT merge PRs automatically. Wait for approval before merging. Never use `--admin` flag to bypass branch protection.**
+3. **Wait for approval**, then merge:
+   ```bash
+   gh pr merge
+   ```
 
-After approval, merge the pull request and delete the branch:
+4. **Monitor post-merge checks**:
+   ```bash
+   gh run list --branch main --limit 3
+   gh run view <run-id>
+   ```
+   - If post-merge fails, fix immediately and push to main
+
+**Never abandon a PR with failing checks. Always fix issues before moving on.**
 
 ## GitHub Actions Workflow Dependencies
 
@@ -138,11 +156,6 @@ After approval, merge the pull request and delete the branch:
 - **Docker layer caching**: The workflow uses `useblacksmith/setup-docker-builder@v1` and `useblacksmith/build-push-action@v2` to cache Docker layers on Blacksmith's NVMe storage (2-40x build improvement).
 
 - **Simplified workflow**: Both PR and post-merge run the same build → smoke-test → security-scan flow. Post-merge adds a push-to-ghcr step.
-
-```bash
-gh pr merge
-git branch -d feature/description-of-change
-```
 
 ## Project-Specific Notes
 
