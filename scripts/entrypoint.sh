@@ -255,6 +255,10 @@ NGINX_EOF
     chmod 644 /etc/nginx/.htpasswd 2>/dev/null || true
     chown ${UPSTREAM}:${UPSTREAM} /etc/nginx/.htpasswd 2>/dev/null || true
 
+    # Ensure nginx config is readable by upstream user
+    chown ${UPSTREAM}:${UPSTREAM} "/etc/nginx/conf.d/${UPSTREAM}.conf" 2>/dev/null || true
+    chmod 644 "/etc/nginx/conf.d/${UPSTREAM}.conf" 2>/dev/null || true
+
     # Test nginx config
     nginx -t || log_warn "Nginx configuration test had issues"
 

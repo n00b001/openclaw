@@ -226,7 +226,7 @@ RUN chmod 755 /root \
 
 # Remove default nginx site and make nginx directories writable
 RUN rm -f /etc/nginx/sites-enabled/default \
-    && chown -R ${UPSTREAM}:${UPSTREAM} /etc/nginx/sites-available /etc/nginx/sites-enabled \
+    && chown -R ${UPSTREAM}:${UPSTREAM} /etc/nginx/sites-available /etc/nginx/sites-enabled /etc/nginx/conf.d \
     && chmod 755 /etc/nginx/sites-available /etc/nginx/sites-enabled \
     && touch /etc/nginx/.htpasswd \
     && chown ${UPSTREAM}:${UPSTREAM} /etc/nginx/.htpasswd \
