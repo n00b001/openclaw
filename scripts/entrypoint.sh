@@ -144,7 +144,7 @@ if [ "$(id -u)" = "0" ]; then
 
     # Configure nginx while still root (requires write access to /etc/nginx)
     log_info "Configuring Nginx..."
-    # Remove any existing nginx configs to avoid port conflicts
+    # Remove any existing nginx configs to avoid conflicts
     rm -f "/etc/nginx/sites-enabled/${UPSTREAM}" 2>/dev/null || true
     rm -f "/etc/nginx/conf.d/${UPSTREAM}.conf" 2>/dev/null || true
     tee "/etc/nginx/conf.d/${UPSTREAM}.conf" > /dev/null << NGINX_EOF
@@ -186,6 +186,17 @@ server {
         access_log off;
     }
 
+    # Alternative health endpoint for zeroclaw
+    location /health {
+        proxy_pass http://${UPSTREAM}_gateway;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        access_log off;
+    }
+
     location /hooks {
         proxy_pass http://${UPSTREAM}_gateway;
         proxy_http_version 1.1;
@@ -216,8 +227,8 @@ server {
     # Browser noVNC access (requires browser sidecar with noVNC on port 6080)
     # Uses variable + resolver to defer DNS lookup so nginx starts even without browser sidecar
     location /browser/ {
-        set \$browser_upstream browser:6080;
-        proxy_pass http://\$browser_upstream/vnc.html;
+        set $browser_upstream browser:6080;
+        proxy_pass http://$browser_upstream/vnc.html;
         proxy_http_version 1.1;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
@@ -229,13 +240,20 @@ server {
         proxy_send_timeout 86400s;
         proxy_buffering off;
         proxy_cache off;
+        # Return 503 if browser is not available instead of failing nginx startup
+        proxy_intercept_errors on;
+        error_page 502 503 504 = @browser_unavailable;
+    }
+
+    location @browser_unavailable {
+        return 503 "Browser service not available. Start the browser container to use noVNC.";
     }
 
     # noVNC websockify endpoint
     # Uses variable + resolver to defer DNS lookup so nginx starts even without browser sidecar
     location /websockify {
-        set \$browser_upstream browser:6080;
-        proxy_pass http://\$browser_upstream/websockify;
+        set $browser_upstream browser:6080;
+        proxy_pass http://$browser_upstream/websockify;
         proxy_http_version 1.1;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
@@ -533,7 +551,7 @@ log_info "=== Troubleshooting Info ==="
 log_info "If you see 404/502 errors:"
 log_info "  1. Check gateway logs: docker logs <container> | grep -A 20 'zeroclaw'"
 log_info "  2. Verify port binding: docker exec <container> netstat -tlnp | grep $INTERNAL_GATEWAY_PORT"
-log_info "  3. Test internal endpoint: docker exec <container> curl -s http://127.0.0.1:$INTERNAL_GATEWAY_PORT/healthz"
+log_info "  3. Test internal endpoint: docker exec <container> curl -s http://127.0.0.1:$INTERNAL_GATEWAY_PORT/health"
 log_info ""
 
 # Clean up stale pid files that might have wrong ownership
