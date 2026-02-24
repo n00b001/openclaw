@@ -40,6 +40,7 @@ services:
       - SETUID
       - AUDIT_WRITE
       - DAC_READ_SEARCH
+      - DAC_OVERRIDE
       - NET_BIND_SERVICE
       - KILL
     networks:

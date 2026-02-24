@@ -147,7 +147,8 @@ if [ "$(id -u)" = "0" ]; then
     # Remove any existing nginx configs to avoid conflicts
     rm -f "/etc/nginx/sites-enabled/${UPSTREAM}" 2>/dev/null || true
     rm -f "/etc/nginx/conf.d/${UPSTREAM}.conf" 2>/dev/null || true
-    tee "/etc/nginx/conf.d/${UPSTREAM}.conf" > /dev/null << NGINX_EOF
+    # Write config to sites-available (standard Debian location)
+    tee "/etc/nginx/sites-available/${UPSTREAM}" > /dev/null << NGINX_EOF
 # $UPSTREAM Nginx Configuration
 
 upstream ${UPSTREAM}_gateway {
@@ -268,6 +269,11 @@ server {
 }
 NGINX_EOF
 
+    # Create symlink in sites-enabled (standard Debian location)
+    ln -sf "/etc/nginx/sites-available/${UPSTREAM}" "/etc/nginx/sites-enabled/${UPSTREAM}"
+    # Ensure config is readable
+    chmod 644 "/etc/nginx/sites-available/${UPSTREAM}" 2>/dev/null || true
+
     # Create htpasswd file (ensure we can write to it)
     rm -f /etc/nginx/.htpasswd 2>/dev/null || true
     if [ -n "${AUTH_PASSWORD:-}" ]; then
@@ -283,7 +289,16 @@ NGINX_EOF
     chown ${UPSTREAM}:${UPSTREAM} /etc/nginx/.htpasswd 2>/dev/null || true
 
     # Test nginx config
-    nginx -t || log_warn "Nginx configuration test had issues"
+    log_info "Testing nginx configuration..."
+    if nginx -t 2>&1; then
+        log_success "Nginx configuration test passed"
+    else
+        log_error "Nginx configuration test failed"
+        log_info "Nginx config contents:"
+        cat "/etc/nginx/sites-available/${UPSTREAM}" 2>/dev/null || true
+        log_info "Nginx main config:"
+        cat /etc/nginx/nginx.conf 2>/dev/null | head -50 || true
+    fi
 
     # Clean up nginx pid file created by nginx -t (runs as root, but supervisor runs as user)
     rm -f /tmp/nginx.pid /run/nginx.pid 2>/dev/null || true
