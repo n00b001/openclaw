@@ -14,12 +14,24 @@ function buildConfig(STATE_DIR, WORKSPACE_DIR, parseList, PROVIDER_URLS, PROVIDE
     const model = parts.length > 1 ? parts.slice(1).join('/') : primaryModel;
 
     const providerKeys = {
+        'kimi-coding': process.env.KIMI_API_KEY,
+        'kimi': process.env.KIMI_API_KEY,
         openrouter: process.env.OPENROUTER_API_KEY,
         anthropic: process.env.ANTHROPIC_API_KEY,
         openai: process.env.OPENAI_API_KEY,
         gemini: process.env.GEMINI_API_KEY,
         zhipu: process.env.ZAI_API_KEY,
+        zai: process.env.ZAI_API_KEY,
         groq: process.env.GROQ_API_KEY,
+        xai: process.env.XAI_API_KEY,
+        mistral: process.env.MISTRAL_API_KEY,
+        cerebras: process.env.CEREBRAS_API_KEY,
+        moonshot: process.env.MOONSHOT_API_KEY,
+        opencode: process.env.OPENCODE_API_KEY,
+        copilot: process.env.COPILOT_GITHUB_TOKEN,
+        xiaomi: process.env.XIAOMI_API_KEY,
+        venice: process.env.VENICE_API_KEY,
+        minimax: process.env.MINIMAX_API_KEY,
     };
 
     let apiKey = '';

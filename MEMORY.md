@@ -16,17 +16,19 @@ This workflow is NON-NEGOTIABLE for all code changes.
 
 **IMPORTANT**: You must always pull origin/main into your branch whenever making a change. You must resolve conflicts if they exist.
 
-## PR Monitoring (CRITICAL)
+## PR Lifecycle (CRITICAL - ALWAYS COMPLETE THIS CYCLE)
 
-**After creating any PR, you MUST monitor and ensure all CI checks pass:**
+**After pushing a PR, you MUST complete the entire lifecycle:**
 
-1. Check status: `gh pr checks <pr-number> --repo xfanth/polyclaw`
-2. If failed, view logs: `gh run view <run-id> --log-failed`
-3. Fix locally in your worktree
-4. Commit and push the fix
-5. Re-check until all checks pass
+1. **Monitor PR** - Check status: `gh pr checks <pr-number>`
+2. **Fix failures** - If failed, view logs: `gh run view <run-id> --log-failed`
+3. **Repeat** - Keep monitoring and fixing until ALL checks pass
+4. **Merge** - Once checks pass and approved, merge: `gh pr merge`
+5. **Verify post-merge** - Check that post-merge actions (builds, deployments) succeed
 
-**Do not abandon a PR with failing checks.** Common fixes:
+**NEVER abandon a PR with failing checks.**
+
+**Common fixes:**
 - Pre-commit: Run `pre-commit run --all-files` locally before committing
 - Tests: Run `uv run pytest tests/unit -v` locally
 - YAML lint: Check indentation and syntax
