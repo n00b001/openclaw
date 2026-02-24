@@ -244,9 +244,8 @@ RUN rm -f /etc/nginx/sites-enabled/default \
 
 # Copy scripts and configuration
 COPY --chown=${UPSTREAM}:${UPSTREAM} scripts/ /app/scripts/
-COPY --chown=${UPSTREAM}:${UPSTREAM} nginx.conf /etc/nginx/sites-available/${UPSTREAM}
-RUN chmod +x /app/scripts/*.sh \
-    && ln -s /etc/nginx/sites-available/${UPSTREAM} /etc/nginx/sites-enabled/${UPSTREAM}
+RUN chmod +x /app/scripts/*.sh
+# Note: nginx config is created dynamically by entrypoint.sh in /etc/nginx/conf.d/
 
 # Create health check script
 RUN printf '%s\n' '#!/bin/bash' "curl -f http://localhost:\${PORT:-8080}/healthz || exit 1" > /app/scripts/healthcheck.sh \
