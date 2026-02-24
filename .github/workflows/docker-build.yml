@@ -1,12 +1,9 @@
 # =============================================================================
 # OpenClaw/PicoClaw/IronClaw/ZeroClaw Docker Build and Push Workflow
 # =============================================================================
-# Simplified flow - no artifact passing between PR and post-merge:
-#   - PR: build → smoke-test → security-scan (artifacts uploaded for job handoff)
-#   - Main: build → smoke-test → security-scan → push-to-ghcr
-#
-# Docker layer caching via Blacksmith makes rebuilds fast (2-40x improvement),
-# so we don't need slow artifact downloads from GitHub storage.
+# Uses Blacksmith sticky disks for fast artifact passing between jobs (3s vs 44+ min)
+# PR: build → smoke-test → security-scan
+# Main: build → smoke-test → security-scan → push-to-ghcr
 # =============================================================================
 
 name: Docker Build and Push
@@ -52,7 +49,6 @@ jobs:
       - name: Detect which upstreams need building
         id: detect
         run: |
-          # Get changed files
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             BASE_SHA="${{ github.event.pull_request.base.sha }}"
             HEAD_SHA="${{ github.event.pull_request.head.sha }}"
@@ -61,7 +57,6 @@ jobs:
             HEAD_SHA="${{ github.sha }}"
           fi
 
-          # Handle initial push (before is all zeros)
           if [ "$BASE_SHA" = "0000000000000000000000000000000000000000" ]; then
             CHANGED_FILES=$(git ls-tree -r --name-only HEAD)
           else
@@ -71,51 +66,39 @@ jobs:
           echo "Changed files:"
           echo "$CHANGED_FILES"
 
-          # Paths that affect ALL upstreams (common infrastructure)
           COMMON_PATHS=".github/workflows/ docker-compose nginx.conf lib/ config/ .dockerignore"
 
-          # Check if base Dockerfile or base configure.js changed (builds all)
           BUILD_ALL="false"
           if echo "$CHANGED_FILES" | grep -q "^Dockerfile$"; then
             BUILD_ALL="true"
-            echo "Base Dockerfile changed - building all upstreams"
           elif echo "$CHANGED_FILES" | grep -q "^scripts/configure\.js$"; then
             BUILD_ALL="true"
-            echo "Base configure.js changed - building all upstreams"
           elif echo "$CHANGED_FILES" | grep -qE "^scripts/(entrypoint|smoke-test|healthcheck)\.sh$"; then
             BUILD_ALL="true"
-            echo "Shared script changed - building all upstreams"
           fi
 
-          # Check if any common paths changed
           if [ "$BUILD_ALL" = "false" ]; then
             for pattern in $COMMON_PATHS; do
               if echo "$CHANGED_FILES" | grep -q "^$pattern"; then
                 BUILD_ALL="true"
-                echo "Common path '$pattern' changed - building all upstreams"
                 break
               fi
             done
           fi
 
-          # Determine which upstreams to build
           if [ "$BUILD_ALL" = "true" ]; then
             echo "upstreams=[\"zeroclaw\"]" >> $GITHUB_OUTPUT
             echo "any_changes=true" >> $GITHUB_OUTPUT
-            echo "Building zeroclaw only (others temporarily disabled)"
             exit 0
           fi
 
-          # Check upstream-specific files
           BUILD_ZEROCLAW="false"
-
           for file in $CHANGED_FILES; do
             case "$file" in
               Dockerfile-zeroclaw|scripts/configure-zeroclaw.js|.zeroclaw-*|zeroclaw-*) BUILD_ZEROCLAW="true" ;;
             esac
           done
 
-          # Build JSON array of upstreams
           FIRST="true"
           UPSTREAMS_JSON="["
           if [ "$BUILD_ZEROCLAW" = "true" ]; then
@@ -125,13 +108,9 @@ jobs:
           fi
           UPSTREAMS_JSON="${UPSTREAMS_JSON}]"
 
-          echo "Upstreams to build: $UPSTREAMS_JSON"
           echo "upstreams=$UPSTREAMS_JSON" >> $GITHUB_OUTPUT
-
-          # Set any_changes flag
           if [ "$UPSTREAMS_JSON" = "[]" ]; then
             echo "any_changes=false" >> $GITHUB_OUTPUT
-            echo "No relevant changes detected - skipping builds"
           else
             echo "any_changes=true" >> $GITHUB_OUTPUT
           fi
@@ -155,8 +134,6 @@ jobs:
         with:
           path: ~/.cache/pre-commit
           key: pre-commit-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}
-          restore-keys: |
-            pre-commit-${{ runner.os }}-
 
       - name: Install pre-commit
         run: pip install pre-commit
@@ -211,14 +188,16 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Mount sticky disk for Docker image
+        uses: useblacksmith/stickydisk@v1
+        with:
+          key: ${{ github.repository }}-${{ matrix.upstream }}-docker-image
+          path: /mnt/docker-images
+
       - name: Determine version and tags
         id: determine-version
         run: |
           UPSTREAM="${{ matrix.upstream }}"
-          TAGGED_FILE=".${UPSTREAM}-tagged-commit"
-          MAIN_FILE=".${UPSTREAM}-main-commit"
-
-          # Determine upstream owner/repo and prefix
           case "$UPSTREAM" in
             zeroclaw)
               PREFIX="zc"
@@ -232,14 +211,12 @@ jobs:
               ;;
           esac
 
-          # Determine xfanth/polyclaw repo tag
           if [ "${{ github.ref_type }}" = "tag" ]; then
             XFANTH_TAG="xfanth_${{ github.ref_name }}"
           else
             XFANTH_TAG="xfanth_main"
           fi
 
-          # Determine upstream version (for Dockerfile) and tag
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             LATEST_TAG=$(curl -s https://api.github.com/repos/${OWNER}/${REPO}/releases/latest | jq -r '.tag_name // empty')
             if [ -n "$LATEST_TAG" ] && [ "$LATEST_TAG" != "null" ]; then
@@ -251,6 +228,8 @@ jobs:
             fi
           else
             BASE_COMMIT="${{ github.event.before }}"
+            TAGGED_FILE=".${UPSTREAM}-tagged-commit"
+            MAIN_FILE=".${UPSTREAM}-main-commit"
             TAGGED_CHANGED=$(git diff --name-only $BASE_COMMIT HEAD 2>/dev/null | grep -q "^${TAGGED_FILE}$" && echo "true" || echo "false")
             MAIN_CHANGED=$(git diff --name-only $BASE_COMMIT HEAD 2>/dev/null | grep -q "^${MAIN_FILE}$" && echo "true" || echo "false")
 
@@ -271,16 +250,12 @@ jobs:
                 UPSTREAM_VERSION="${PREFIX}_main"
                 UPSTREAM_TAG="${UPSTREAM}_main"
               fi
-            elif [ "$MAIN_CHANGED" = "true" ]; then
-              UPSTREAM_VERSION="${PREFIX}_main"
-              UPSTREAM_TAG="${UPSTREAM}_main"
             else
               UPSTREAM_VERSION="${PREFIX}_main"
               UPSTREAM_TAG="${UPSTREAM}_main"
             fi
           fi
 
-          # Output all values
           echo "version=$XFANTH_TAG" >> $GITHUB_OUTPUT
           echo "tags=$XFANTH_TAG,$UPSTREAM_TAG" >> $GITHUB_OUTPUT
           echo "xfanth_tag=$XFANTH_TAG" >> $GITHUB_OUTPUT
@@ -320,22 +295,19 @@ jobs:
             GIT_COMMIT=${{ github.sha }}
             BUILD_DATE=${{ github.event.head_commit.timestamp }}
             IMAGE_VERSION=${{ steps.determine-version.outputs.xfanth_tag }}
-          outputs: type=docker,dest=/tmp/docker-image-${{ matrix.upstream }}.tar
 
-      - name: Upload Docker image artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: docker-image-${{ matrix.upstream }}
-          path: /tmp/docker-image-${{ matrix.upstream }}.tar
-          retention-days: 1
+      - name: Save Docker image to sticky disk
+        run: |
+          mkdir -p /mnt/docker-images
+          IMAGE_TAG="${{ env.IMAGE_NAME }}-${{ matrix.upstream }}:${{ steps.meta.outputs.version }}"
+          docker save -o /mnt/docker-images/docker-image.tar "$IMAGE_TAG"
+          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
 
   smoke-test:
     name: Smoke Test (${{ matrix.upstream }})
     runs-on: blacksmith-8vcpu-ubuntu-2404
     needs: [detect-changes, build]
-    if: |
-      always() &&
-      needs.build.result == 'success'
+    if: always() && needs.build.result == 'success'
     strategy:
       matrix:
         upstream: ${{ fromJson(needs.detect-changes.outputs.upstreams) }}
@@ -343,13 +315,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Download Docker image artifact
-        uses: actions/download-artifact@v4
+      - name: Mount sticky disk for Docker image
+        uses: useblacksmith/stickydisk@v1
         with:
-          name: docker-image-${{ matrix.upstream }}
+          key: ${{ github.repository }}-${{ matrix.upstream }}-docker-image
+          path: /mnt/docker-images
 
       - name: Load Docker image
-        run: docker load -i docker-image-${{ matrix.upstream }}.tar
+        run: docker load -i /mnt/docker-images/docker-image.tar
 
       - name: Run smoke test
         run: |
@@ -374,9 +347,7 @@ jobs:
     name: Security Scan (${{ matrix.upstream }})
     runs-on: blacksmith-4vcpu-ubuntu-2404
     needs: [detect-changes, build]
-    if: |
-      always() &&
-      needs.build.result == 'success'
+    if: always() && needs.build.result == 'success'
     strategy:
       matrix:
         upstream: ${{ fromJson(needs.detect-changes.outputs.upstreams) }}
@@ -384,13 +355,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Download Docker image artifact
-        uses: actions/download-artifact@v4
+      - name: Mount sticky disk for Docker image
+        uses: useblacksmith/stickydisk@v1
         with:
-          name: docker-image-${{ matrix.upstream }}
+          key: ${{ github.repository }}-${{ matrix.upstream }}-docker-image
+          path: /mnt/docker-images
 
       - name: Load Docker image
-        run: docker load -i docker-image-${{ matrix.upstream }}.tar
+        run: docker load -i /mnt/docker-images/docker-image.tar
 
       - name: Get image tag
         id: get-tag
@@ -447,86 +419,67 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Download Docker image artifact
-        uses: actions/download-artifact@v4
+      - name: Mount sticky disk for Docker image
+        uses: useblacksmith/stickydisk@v1
         with:
-          name: docker-image-${{ matrix.upstream }}
+          key: ${{ github.repository }}-${{ matrix.upstream }}-docker-image
+          path: /mnt/docker-images
 
       - name: Determine version and tags
         id: determine-version
         run: |
           UPSTREAM="${{ matrix.upstream }}"
-          TAGGED_FILE=".${UPSTREAM}-tagged-commit"
-          MAIN_FILE=".${UPSTREAM}-main-commit"
-
-          # Determine upstream owner/repo and prefix
           case "$UPSTREAM" in
             zeroclaw)
               PREFIX="zc"
-              OWNER="zeroclaw-labs"
-              REPO="zeroclaw"
               ;;
             *)
               PREFIX="${UPSTREAM:0:2}"
-              OWNER="${{ matrix.github_owner }}"
-              REPO="${{ matrix.github_repo }}"
               ;;
           esac
 
-          # Determine xfanth/polyclaw repo tag
           if [ "${{ github.ref_type }}" = "tag" ]; then
             XFANTH_TAG="xfanth_${{ github.ref_name }}"
           else
             XFANTH_TAG="xfanth_main"
           fi
 
-          # Determine upstream version (for Dockerfile) and tag
           BASE_COMMIT="${{ github.event.before }}"
+          TAGGED_FILE=".${UPSTREAM}-tagged-commit"
+          MAIN_FILE=".${UPSTREAM}-main-commit"
           TAGGED_CHANGED=$(git diff --name-only $BASE_COMMIT HEAD 2>/dev/null | grep -q "^${TAGGED_FILE}$" && echo "true" || echo "false")
           MAIN_CHANGED=$(git diff --name-only $BASE_COMMIT HEAD 2>/dev/null | grep -q "^${MAIN_FILE}$" && echo "true" || echo "false")
 
           if [ "$TAGGED_CHANGED" = "true" ]; then
             TRACKED_COMMIT=$(cat "$TAGGED_FILE" 2>/dev/null || echo "")
             if [ -n "$TRACKED_COMMIT" ]; then
-              TAG=$(curl -s "https://api.github.com/repos/${OWNER}/${REPO}/git/refs/tags" | \
+              TAG=$(curl -s "https://api.github.com/repos/zeroclaw-labs/zeroclaw/git/refs/tags" | \
                 jq -r --arg commit "$TRACKED_COMMIT" '.[] | select(.object.sha == $commit or .object.object.sha == $commit) | .ref' | \
                 sed 's|refs/tags/||' | head -n1)
             fi
             if [ -z "$TAG" ]; then
-              TAG=$(curl -s "https://api.github.com/repos/${OWNER}/${REPO}/releases/latest" | jq -r '.tag_name // empty')
+              TAG=$(curl -s "https://api.github.com/repos/zeroclaw-labs/zeroclaw/releases/latest" | jq -r '.tag_name // empty')
             fi
             if [ -n "$TAG" ] && [ "$TAG" != "null" ]; then
-              UPSTREAM_VERSION="$TAG"
               UPSTREAM_TAG="${UPSTREAM}_$TAG"
             else
-              UPSTREAM_VERSION="${PREFIX}_main"
               UPSTREAM_TAG="${UPSTREAM}_main"
             fi
-          elif [ "$MAIN_CHANGED" = "true" ]; then
-            UPSTREAM_VERSION="${PREFIX}_main"
-            UPSTREAM_TAG="${UPSTREAM}_main"
           else
-            UPSTREAM_VERSION="${PREFIX}_main"
             UPSTREAM_TAG="${UPSTREAM}_main"
           fi
 
-          # Output all values
           echo "version=$XFANTH_TAG" >> $GITHUB_OUTPUT
           echo "tags=$XFANTH_TAG,$UPSTREAM_TAG" >> $GITHUB_OUTPUT
-          echo "xfanth_tag=$XFANTH_TAG" >> $GITHUB_OUTPUT
-          echo "upstream_tag=$UPSTREAM_TAG" >> $GITHUB_OUTPUT
-          echo "upstream_version=$UPSTREAM_VERSION" >> $GITHUB_OUTPUT
 
       - name: Load and push image
         run: |
-          docker load -i docker-image-${{ matrix.upstream }}.tar
+          docker load -i /mnt/docker-images/docker-image.tar
 
           IMAGE_ID=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep "${{ matrix.upstream }}" | head -1)
           echo "Loaded image: $IMAGE_ID"
 
-          VERSION="${{ steps.determine-version.outputs.version }}"
           TAGS="${{ steps.determine-version.outputs.tags }}"
-
           IFS=',' read -ra TAG_ARRAY <<< "$TAGS"
           for TAG in "${TAG_ARRAY[@]}"; do
             TARGET="${{ env.REGISTRY }}/xfanth/${{ matrix.upstream }}:$TAG"
