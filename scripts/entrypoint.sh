@@ -144,6 +144,9 @@ if [ "$(id -u)" = "0" ]; then
 
     # Configure nginx while still root (requires write access to /etc/nginx)
     log_info "Configuring Nginx..."
+    # Remove any existing nginx configs to avoid conflicts (Dockerfile copies a static one)
+    rm -f "/etc/nginx/sites-enabled/${UPSTREAM}" 2>/dev/null || true
+    rm -f "/etc/nginx/sites-enabled/default" 2>/dev/null || true
     tee "/etc/nginx/conf.d/${UPSTREAM}.conf" > /dev/null << NGINX_EOF
 # $UPSTREAM Nginx Configuration
 
