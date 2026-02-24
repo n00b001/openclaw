@@ -101,8 +101,8 @@ This project builds Docker images for four upstream variants:
    - No UI components
    - Entry point: `/opt/ironclaw/ironclaw`
 
-4. **ZeroClaw** (`zeroclaw-labs/zeroclaw`) - Go-based implementation
-   - Built with `go build`
+4. **ZeroClaw** (`zeroclaw-labs/zeroclaw`) - Rust-based implementation
+   - Built with `cargo build --release --features whatsapp-web`
    - No UI components
    - Entry point: `/opt/zeroclaw/zeroclaw`
 
