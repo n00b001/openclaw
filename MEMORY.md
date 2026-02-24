@@ -10,10 +10,28 @@ When making ANY code changes, ALWAYS follow this workflow:
 4. **git commit** - Commit with descriptive message
 5. **git push** - Push to remote
 6. **create PR** - Create a pull request using `gh pr create`
+7. **monitor PR** - Check CI status and fix any failures immediately
 
 This workflow is NON-NEGOTIABLE for all code changes.
 
 **IMPORTANT**: You must always pull origin/main into your branch whenever making a change. You must resolve conflicts if they exist.
+
+## PR Lifecycle (CRITICAL - ALWAYS COMPLETE THIS CYCLE)
+
+**After pushing a PR, you MUST complete the entire lifecycle:**
+
+1. **Monitor PR** - Check status: `gh pr checks <pr-number>`
+2. **Fix failures** - If failed, view logs: `gh run view <run-id> --log-failed`
+3. **Repeat** - Keep monitoring and fixing until ALL checks pass
+4. **Merge** - Once checks pass and approved, merge: `gh pr merge`
+5. **Verify post-merge** - Check that post-merge actions (builds, deployments) succeed
+
+**NEVER abandon a PR with failing checks.**
+
+**Common fixes:**
+- Pre-commit: Run `pre-commit run --all-files` locally before committing
+- Tests: Run `uv run pytest tests/unit -v` locally
+- YAML lint: Check indentation and syntax
 
 ## Important Rules
 
@@ -83,8 +101,8 @@ This project builds Docker images for four upstream variants:
    - No UI components
    - Entry point: `/opt/ironclaw/ironclaw`
 
-4. **ZeroClaw** (`zeroclaw-labs/zeroclaw`) - Go-based implementation
-   - Built with `go build`
+4. **ZeroClaw** (`zeroclaw-labs/zeroclaw`) - Rust-based implementation
+   - Built with `cargo build --release --features whatsapp-web`
    - No UI components
    - Entry point: `/opt/zeroclaw/zeroclaw`
 

@@ -23,8 +23,20 @@ This workflow is NON-NEGOTIABLE for all code changes.
 - Always use worktrees for isolation
 - Always create a PR for every change
 - Always monitor PR status until CI succeeds
+- Fix any failing checks immediately
 - Always merge after approval
 - Always verify post-merge actions succeed
+
+### PR Monitoring (CRITICAL)
+After creating a PR, you **MUST** monitor it until all checks pass:
+
+1. Check status: `gh pr checks <pr-number>`
+2. View failures: `gh run view <run-id> --log-failed`
+3. Fix issues locally and push new commits
+4. Repeat until all checks pass
+5. Only then wait for approval to merge
+
+**Never abandon a PR with failing checks.**
 
 **Project Memory**: Store project-specific knowledge in MEMORY.md (patterns, gotchas, reference info).
 
@@ -169,7 +181,7 @@ This project builds Docker images for four upstream variants:
 | openclaw | Node.js | openclaw/openclaw | `pnpm build` |
 | picoclaw | Go | sipeed/picoclaw | `go build` |
 | ironclaw | Rust | nearai/ironclaw | `cargo build --release` |
-| zeroclaw | Go | zeroclaw-labs/zeroclaw | `go build` |
+| zeroclaw | Rust | zeroclaw-labs/zeroclaw | `cargo build --release --features whatsapp-web` |
 
 When modifying CI workflows that use the upstream matrix, update ALL of:
 - `.github/workflows/docker-build.yml` (build, smoke-test, security-scan, push-to-ghcr jobs)
@@ -182,6 +194,24 @@ When changing the security-scan matrix (e.g., adding a new upstream):
 - This is **expected behavior** - the old matrix categories don't match new ones
 - The warning resolves automatically after merge to main
 - All scans still run correctly; the warning is informational only
+
 ## Docker Entrypoint Environment Variables
 
 When adding new environment variables to `scripts/configure.js`, you **must** also add them to the `--whitelist-environment` list in `scripts/entrypoint.sh` (around line 81). The entrypoint runs as root, then switches to the upstream user via `su` - only whitelisted env vars survive this switch. See MEMORY.md for the current whitelist.
+
+## ZeroClaw HOME Directory
+
+ZeroClaw (Rust binary) uses `$HOME/.zeroclaw/` to find its configuration. This differs from Node.js upstreams that use `OPENCLAW_STATE_DIR`.
+
+**Important**: The CLI wrapper at `/usr/local/bin/zeroclaw` sets `HOME=/data` before executing the binary, ensuring config is found at `/data/.zeroclaw/`.
+
+When running interactive commands via `docker exec`:
+- Config is at `/data/.zeroclaw/config.toml`
+- Workspace is at `/data/workspace/`
+- All commands use this location automatically via the wrapper
+
+**Permission issues**: If using bind mounts with restrictive permissions, run this on the host:
+```bash
+chown -R 10000:10000 /path/to/bind-mount
+```
+User ID 10000 is the `zeroclaw` user inside the container.

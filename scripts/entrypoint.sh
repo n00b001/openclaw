@@ -108,15 +108,27 @@ if [ "$(id -u)" = "0" ]; then
 
     # Create required directories first (before chown)
     STATE_DIR="${OPENCLAW_STATE_DIR:-$DEFAULT_STATE_DIR}"
+    WORKSPACE_DIR="${OPENCLAW_WORKSPACE_DIR:-/data/workspace}"
     mkdir -p "$STATE_DIR/identity" 2>/dev/null || true
     mkdir -p "$STATE_DIR/credentials" 2>/dev/null || true
-    mkdir -p "${OPENCLAW_WORKSPACE_DIR:-/data/workspace}" 2>/dev/null || true
+    mkdir -p "$WORKSPACE_DIR" 2>/dev/null || true
+    # Create zeroclaw workspace subdirectories (needed for model cache, state, etc.)
+    if [ "$UPSTREAM" = "zeroclaw" ]; then
+        mkdir -p "$WORKSPACE_DIR/state" 2>/dev/null || true
+        mkdir -p "$WORKSPACE_DIR/memory" 2>/dev/null || true
+        mkdir -p "$WORKSPACE_DIR/sessions" 2>/dev/null || true
+        mkdir -p "$WORKSPACE_DIR/skills" 2>/dev/null || true
+        mkdir -p "$WORKSPACE_DIR/cron" 2>/dev/null || true
+    fi
     mkdir -p "/var/log/$UPSTREAM" 2>/dev/null || true
 
     # Fix ownership - warn if chown fails (common with restrictive bind mounts)
     if ! chown -R "$UPSTREAM:$UPSTREAM" /data 2>/dev/null; then
         log_warn "Could not change ownership of /data - bind mount may have restrictive permissions"
         log_warn "If you see permission errors, fix ownership on the host: chown -R 10000:10000 <bind-mount-path>"
+    else
+        # Also fix any workspace subdirectories that may have been created by interactive sessions
+        chown -R "$UPSTREAM:$UPSTREAM" "${OPENCLAW_WORKSPACE_DIR:-/data/workspace}" 2>/dev/null || true
     fi
     chown -R "$UPSTREAM:$UPSTREAM" "/var/log/$UPSTREAM" 2>/dev/null || true
     chown -R "$UPSTREAM:$UPSTREAM" /var/log/supervisor 2>/dev/null || true
@@ -132,10 +144,9 @@ if [ "$(id -u)" = "0" ]; then
 
     # Configure nginx while still root (requires write access to /etc/nginx)
     log_info "Configuring Nginx..."
-    # Remove any existing config to avoid "duplicate default server" errors
-    rm -f /etc/nginx/sites-enabled/* 2>/dev/null || true
-    rm -f /etc/nginx/conf.d/*.conf 2>/dev/null || true
-
+    # Remove any existing nginx configs to avoid conflicts
+    rm -f "/etc/nginx/sites-enabled/${UPSTREAM}" 2>/dev/null || true
+    rm -f "/etc/nginx/conf.d/${UPSTREAM}.conf" 2>/dev/null || true
     tee "/etc/nginx/conf.d/${UPSTREAM}.conf" > /dev/null << NGINX_EOF
 # $UPSTREAM Nginx Configuration
 
@@ -149,6 +160,10 @@ limit_req_zone \$binary_remote_addr zone=${UPSTREAM}_limit:10m rate=10r/s;
 server {
     listen $EXTERNAL_GATEWAY_PORT default_server;
     server_name _;
+
+    # DNS resolver for dynamic upstream resolution (Docker DNS)
+    # 127.0.0.11 is Docker's embedded DNS server
+    resolver 127.0.0.11 valid=30s ipv6=off;
 
     add_header X-Frame-Options "SAMEORIGIN" always;
     add_header X-Content-Type-Options "nosniff" always;
@@ -209,11 +224,11 @@ server {
         proxy_cache off;
     }
 
+    # Browser noVNC access (requires browser sidecar with noVNC on port 6080)
+    # Uses variable + resolver to defer DNS lookup so nginx starts even without browser sidecar
     location /browser/ {
-        # Use resolver to avoid nginx failing at startup if browser is not available
-        resolver 127.0.0.11 valid=30s;
-        set \$browser_host "browser";
-        proxy_pass http://\$browser_host:6080/vnc.html;
+        set $browser_upstream browser:6080;
+        proxy_pass http://$browser_upstream/vnc.html;
         proxy_http_version 1.1;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
@@ -234,11 +249,11 @@ server {
         return 503 "Browser service not available. Start the browser container to use noVNC.";
     }
 
+    # noVNC websockify endpoint
+    # Uses variable + resolver to defer DNS lookup so nginx starts even without browser sidecar
     location /websockify {
-        # Use resolver to avoid nginx failing at startup if browser is not available
-        resolver 127.0.0.11 valid=30s;
-        set \$browser_host "browser";
-        proxy_pass http://\$browser_host:6080/websockify;
+        set $browser_upstream browser:6080;
+        proxy_pass http://$browser_upstream/websockify;
         proxy_http_version 1.1;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
@@ -270,8 +285,11 @@ NGINX_EOF
     # Test nginx config
     nginx -t || log_warn "Nginx configuration test had issues"
 
+    # Clean up nginx pid file created by nginx -t (runs as root, but supervisor runs as user)
+    rm -f /tmp/nginx.pid /run/nginx.pid 2>/dev/null || true
+
     log_info "Switching to $UPSTREAM user..."
-    exec su -s /bin/bash --whitelist-environment=HOME,UPSTREAM,OPENCLAW_STATE_DIR,OPENCLAW_WORKSPACE_DIR,OPENCLAW_EXTERNAL_GATEWAY_PORT,OPENCLAW_INTERNAL_GATEWAY_PORT,OPENCLAW_GATEWAY_TOKEN,AUTH_USERNAME,AUTH_PASSWORD,OPENCLAW_CONTROL_UI_ALLOWED_ORIGINS,OPENCLAW_CONTROL_UI_ALLOW_INSECURE_AUTH,OPENCLAW_GATEWAY_BIND,OPENCLAW_PRIMARY_MODEL,BROWSER_CDP_URL,BROWSER_DEFAULT_PROFILE,WHATSAPP_ENABLED,WHATSAPP_DM_POLICY,WHATSAPP_ALLOW_FROM,TELEGRAM_BOT_TOKEN,TELEGRAM_DM_POLICY,DISCORD_BOT_TOKEN,DISCORD_DM_POLICY,SLACK_BOT_TOKEN,SLACK_DM_POLICY,HOOKS_ENABLED,HOOKS_TOKEN,HOOKS_PATH,ANTHROPIC_API_KEY,OPENAI_API_KEY,OPENROUTER_API_KEY,GEMINI_API_KEY,XAI_API_KEY,GROQ_API_KEY,MISTRAL_API_KEY,CEREBRAS_API_KEY,MOONSHOT_API_KEY,KIMI_API_KEY,ZAI_API_KEY,OPENCODE_API_KEY,COPILOT_GITHUB_TOKEN,XIAOMI_API_KEY,ZEROCLAW_API_KEY,ZEROCLAW_PROVIDER,ZEROCLAW_MODEL,ZEROCLAW_WORKSPACE,ZEROCLAW_TEMPERATURE,ZEROCLAW_GATEWAY_HOST,ZEROCLAW_WHATSAPP_APP_SECRET "$UPSTREAM" -c 'cd /data && /app/scripts/entrypoint.sh'
+    exec su -s /bin/bash --whitelist-environment=HOME,UPSTREAM,OPENCLAW_STATE_DIR,OPENCLAW_WORKSPACE_DIR,OPENCLAW_EXTERNAL_GATEWAY_PORT,OPENCLAW_INTERNAL_GATEWAY_PORT,OPENCLAW_GATEWAY_TOKEN,AUTH_USERNAME,AUTH_PASSWORD,OPENCLAW_CONTROL_UI_ALLOWED_ORIGINS,OPENCLAW_CONTROL_UI_ALLOW_INSECURE_AUTH,OPENCLAW_GATEWAY_BIND,OPENCLAW_PRIMARY_MODEL,OPENCLAW_FALLBACK_MODELS,OPENCLAW_IMAGE_MODEL_PRIMARY,OPENCLAW_IMAGE_MODEL_FALLBACKS,BROWSER_CDP_URL,BROWSER_DEFAULT_PROFILE,BROWSER_EVALUATE_ENABLED,BROWSER_SNAPSHOT_MODE,BROWSER_REMOTE_TIMEOUT_MS,BROWSER_REMOTE_HANDSHAKE_TIMEOUT_MS,WHATSAPP_ENABLED,WHATSAPP_DM_POLICY,WHATSAPP_ALLOW_FROM,WHATSAPP_GROUP_POLICY,WHATSAPP_GROUP_ALLOW_FROM,WHATSAPP_SELF_CHAT_MODE,WHATSAPP_MEDIA_MAX_MB,WHATSAPP_HISTORY_LIMIT,TELEGRAM_BOT_TOKEN,TELEGRAM_DM_POLICY,TELEGRAM_ALLOW_FROM,TELEGRAM_GROUP_POLICY,TELEGRAM_GROUP_ALLOW_FROM,DISCORD_BOT_TOKEN,DISCORD_DM_POLICY,DISCORD_DM_ALLOW_FROM,DISCORD_GROUP_POLICY,SLACK_BOT_TOKEN,SLACK_APP_TOKEN,SLACK_DM_POLICY,SLACK_GROUP_POLICY,HOOKS_ENABLED,HOOKS_TOKEN,HOOKS_PATH,ANTHROPIC_API_KEY,OPENAI_API_KEY,OPENROUTER_API_KEY,GEMINI_API_KEY,XAI_API_KEY,GROQ_API_KEY,MISTRAL_API_KEY,CEREBRAS_API_KEY,MOONSHOT_API_KEY,KIMI_API_KEY,ZAI_API_KEY,OPENCODE_API_KEY,COPILOT_GITHUB_TOKEN,XIAOMI_API_KEY,VENICE_API_KEY,MINIMAX_API_KEY,AI_GATEWAY_API_KEY,SYNTHETIC_API_KEY,ZEROCLAW_API_KEY,AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY,AWS_REGION,AWS_SESSION_TOKEN,BEDROCK_PROVIDER_FILTER,OLLAMA_BASE_URL,DEEPGRAM_API_KEY,OP_SERVICE_ACCOUNT_TOKEN,GOG_KEYRING_PASSWORD,ZEROCLAW_PROVIDER,ZEROCLAW_MODEL,ZEROCLAW_WORKSPACE,ZEROCLAW_TEMPERATURE,ZEROCLAW_GATEWAY_HOST,ZEROCLAW_WHATSAPP_APP_SECRET "$UPSTREAM" -c 'cd /data && /app/scripts/entrypoint.sh'
 fi
 
 # =============================================================================
@@ -535,5 +553,8 @@ log_info "  1. Check gateway logs: docker logs <container> | grep -A 20 'zerocla
 log_info "  2. Verify port binding: docker exec <container> netstat -tlnp | grep $INTERNAL_GATEWAY_PORT"
 log_info "  3. Test internal endpoint: docker exec <container> curl -s http://127.0.0.1:$INTERNAL_GATEWAY_PORT/health"
 log_info ""
+
+# Clean up stale pid files that might have wrong ownership
+rm -f /tmp/nginx.pid /run/nginx.pid 2>/dev/null || true
 
 exec supervisord -c "$STATE_DIR/supervisord.conf"

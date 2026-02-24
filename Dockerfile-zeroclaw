@@ -59,7 +59,7 @@ RUN set -eux && \
 # Build ZeroClaw (Rust binary)
 RUN echo "Building ZeroClaw (Rust binary)..." && \
     cd /build && \
-    cargo build --release && \
+    cargo build --release --features whatsapp-web && \
     mv target/release/zeroclaw /build/zeroclaw && \
     echo "ZeroClaw binary built successfully"
 
@@ -190,9 +190,10 @@ RUN echo "Moving ZeroClaw binary..." && \
     chmod +x /opt/zeroclaw/zeroclaw && \
     echo "ZeroClaw binary moved to /opt/zeroclaw/zeroclaw"
 
-# Create CLI wrapper
+# Create CLI wrapper - sets HOME=/data so zeroclaw finds config at /data/.zeroclaw/
 # hadolint ignore=SC2016
 RUN printf '%s\n' '#!/usr/bin/env bash' \
+    'export HOME=/data' \
     'exec /opt/zeroclaw/zeroclaw "$@"' > /usr/local/bin/${UPSTREAM} \
     && chmod +x /usr/local/bin/${UPSTREAM}
 
