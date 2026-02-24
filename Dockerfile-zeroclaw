@@ -216,7 +216,9 @@ RUN printf '%s\n' '#!/usr/bin/env bash' \
 
 # Set up directories with proper permissions
 # ZeroClaw uses /root/.zeroclaw for config (HOME=/root)
-RUN mkdir -p /root/.${UPSTREAM}/identity /root/.${UPSTREAM}/credentials /data/workspace /app/config /var/log/${UPSTREAM} \
+# Need to make /root accessible by zeroclaw user
+RUN chmod 755 /root \
+    && mkdir -p /root/.${UPSTREAM}/identity /root/.${UPSTREAM}/credentials /data/workspace /app/config /var/log/${UPSTREAM} \
     && chown -R ${UPSTREAM}:${UPSTREAM} /root/.${UPSTREAM} \
     && chown -R ${UPSTREAM}:${UPSTREAM} /data/workspace \
     && chown -R ${UPSTREAM}:${UPSTREAM} /var/log/${UPSTREAM} \
