@@ -203,10 +203,10 @@ When adding new environment variables to `scripts/configure.js`, you **must** al
 
 ZeroClaw (Rust binary) uses `$HOME/.zeroclaw/` to find its configuration. This differs from Node.js upstreams that use `OPENCLAW_STATE_DIR`.
 
-**Important**: The CLI wrapper at `/usr/local/bin/zeroclaw` sets `HOME=/data` before executing the binary, ensuring config is found at `/data/.zeroclaw/`.
+**Important**: The CLI wrapper at `/usr/local/bin/zeroclaw` sets `HOME=/root` before executing the binary, ensuring config is found at `/root/.zeroclaw/`.
 
 When running interactive commands via `docker exec`:
-- Config is at `/data/.zeroclaw/config.toml`
+- Config is at `/root/.zeroclaw/config.toml`
 - Workspace is at `/data/workspace/`
 - All commands use this location automatically via the wrapper
 

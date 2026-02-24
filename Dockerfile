@@ -307,6 +307,7 @@ RUN if [ "${UPSTREAM}" = "openclaw" ]; then \
 RUN printf '%s\n' '#!/usr/bin/env bash' "UPSTREAM=\"${UPSTREAM}\"" 'if [ "$UPSTREAM" = "picoclaw" ]; then' \
     '    exec /opt/picoclaw/picoclaw "$@"' \
     'elif [ "$UPSTREAM" = "zeroclaw" ]; then' \
+    '    export HOME=/root' \
     '    exec /opt/zeroclaw/zeroclaw "$@"' \
     'elif [ "$UPSTREAM" = "ironclaw" ]; then' \
     '    exec /opt/ironclaw/ironclaw "$@"' \
@@ -324,6 +325,7 @@ RUN printf '%s\n' '#!/usr/bin/env bash' \
     'elif [ -f /opt/ironclaw/ironclaw ]; then' \
     '    exec /opt/ironclaw/ironclaw "$@"' \
     'elif [ -f /opt/zeroclaw/zeroclaw ]; then' \
+    '    export HOME=/root' \
     '    exec /opt/zeroclaw/zeroclaw "$@"' \
     'else' \
     '    echo "Error: No upstream application found" >&2' \

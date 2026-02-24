@@ -282,7 +282,7 @@ Each upstream uses a different config format and file location:
 |----------|--------|-------------|-------|
 | OpenClaw | JSON | `$STATE_DIR/openclaw.json` | Full config with providers, channels, etc. |
 | PicoClaw | JSON | `$STATE_DIR/.picoclaw/config.json` | Go-style snake_case keys |
-| ZeroClaw | TOML | `$STATE_DIR/.zeroclaw/config.toml` | Flat structure with top-level fields |
+| ZeroClaw | TOML | `/root/.zeroclaw/config.toml` | Flat structure with top-level fields |
 | IronClaw | N/A | PostgreSQL database | Uses `ironclaw onboard` for setup |
 
 ### ZeroClaw Config Format (Critical!)
@@ -291,8 +291,8 @@ ZeroClaw uses a **flat TOML structure**, not nested like PicoClaw/OpenClaw:
 
 ```toml
 # ZeroClaw config.toml - FLAT structure!
-workspace_dir = "/data/.zeroclaw/workspace"
-config_path = "/data/.zeroclaw/config.toml"
+workspace_dir = "/data/workspace"
+config_path = "/root/.zeroclaw/config.toml"
 api_key = "your-api-key"
 default_provider = "openrouter"
 default_model = "anthropic/claude-sonnet-4-5"

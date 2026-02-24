@@ -73,7 +73,7 @@ case "$UPSTREAM" in
         ;;
     zeroclaw)
         CLI_NAME="zeroclaw"
-        DEFAULT_STATE_DIR="/data/.zeroclaw"
+        DEFAULT_STATE_DIR="/root/.zeroclaw"
         ;;
     *)
         log_error "Unknown upstream: $UPSTREAM"
@@ -386,9 +386,9 @@ export UPSTREAM="$UPSTREAM"
 export OPENCLAW_STATE_DIR="$STATE_DIR"
 export OPENCLAW_WORKSPACE_DIR="$WORKSPACE_DIR"
 export OPENCLAW_INTERNAL_GATEWAY_PORT="$INTERNAL_GATEWAY_PORT"
-# ZeroClaw expects config at ~/.zeroclaw/ so HOME must be /data (not /data/.zeroclaw)
+# ZeroClaw expects config at ~/.zeroclaw/ so HOME must be /root (not /data/.zeroclaw)
 if [ "$UPSTREAM" = "zeroclaw" ]; then
-    export HOME="/data"
+    export HOME="/root"
 else
     export HOME="$STATE_DIR"
 fi
@@ -411,9 +411,9 @@ else
 fi
 
 # Determine the correct HOME directory for supervisord
-# ZeroClaw expects config at ~/.zeroclaw/ so HOME must be /data (not /data/.zeroclaw)
+# ZeroClaw expects config at ~/.zeroclaw/ so HOME must be /root (not /data/.zeroclaw)
 if [ "$UPSTREAM" = "zeroclaw" ]; then
-    SUPERVISOR_HOME="/data"
+    SUPERVISOR_HOME="/root"
 else
     SUPERVISOR_HOME="$STATE_DIR"
 fi

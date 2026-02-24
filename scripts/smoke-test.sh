@@ -52,10 +52,10 @@ case "$UPSTREAM" in
 esac
 
 # Get correct HOME directory for upstream
-# ZeroClaw expects config at ~/.zeroclaw/ so HOME=/data (not /data/.zeroclaw)
+# ZeroClaw expects config at ~/.zeroclaw/ so HOME=/root (not /data/.zeroclaw)
 get_home_dir() {
     case "$UPSTREAM" in
-        zeroclaw) echo "/data" ;;
+        zeroclaw) echo "/root" ;;
         *) echo "/data/.${UPSTREAM}" ;;
     esac
 }
@@ -63,7 +63,7 @@ get_home_dir() {
 # Get config directory for upstream (where config file is located)
 get_config_dir() {
     case "$UPSTREAM" in
-        zeroclaw) echo "/data/.zeroclaw" ;;
+        zeroclaw) echo "/root/.zeroclaw" ;;
         *) echo "/data/.${UPSTREAM}/.${UPSTREAM}" ;;
     esac
 }
@@ -71,7 +71,7 @@ get_config_dir() {
 # Get STATE_DIR for upstream (passed to OPENCLAW_STATE_DIR)
 get_state_dir() {
     case "$UPSTREAM" in
-        zeroclaw) echo "/data/.zeroclaw" ;;
+        zeroclaw) echo "/root/.zeroclaw" ;;
         *) echo "/data/.${UPSTREAM}" ;;
     esac
 }
