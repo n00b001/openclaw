@@ -4,23 +4,17 @@
 
 When making ANY code changes, ALWAYS follow this workflow:
 
-1. **Use worktrees** - Create a git worktree for isolation: `git worktree add ../polyclaw-worktrees/branch-name -b branch-name`
-2. **git fetch** - Get latest changes from remote
-3. **git merge origin/main** - Merge main into your branch BEFORE pushing (resolve any conflicts)
-4. **git add** - Stage the changes
-5. **git commit** - Commit with descriptive message
-6. **git push** - Push to remote
-7. **create PR** - Create a pull request using `gh pr create`
-8. **monitor PR** - Check CI status: `gh pr checks <pr-number>` and fix any failures immediately
-9. **merge PR** - After approval, merge: `gh pr merge`
-10. **verify post-merge** - Ensure post-merge actions succeed
+1. **git pull** - Get latest changes from remote
+2. **git branch** - Create a feature branch for the work
+3. **git add** - Stage the changes
+4. **git commit** - Commit with descriptive message
+5. **git push** - Push to remote
+6. **create PR** - Create a pull request using `gh pr create`
+7. **monitor PR** - Check CI status and fix any failures immediately
 
 This workflow is NON-NEGOTIABLE for all code changes.
 
-**IMPORTANT**:
-- Always use worktrees for isolation
-- Always merge origin/main into your branch before pushing to avoid merge conflicts on the PR
-- If a PR has merge conflicts, fix them by merging main into the PR branch
+**IMPORTANT**: You must always pull origin/main into your branch whenever making a change. You must resolve conflicts if they exist.
 
 ## PR Lifecycle (CRITICAL - ALWAYS COMPLETE THIS CYCLE)
 
@@ -139,9 +133,8 @@ When the entrypoint script runs as root and then switches to the upstream user v
 - **Location**: `scripts/entrypoint.sh` line ~93 in the `su` command
 - **Fix**: Add any new environment variables that configure.js reads to the whitelist
 
-Current whitelist (from `scripts/entrypoint.sh`):
+Current whitelist (from `scripts/entrypoint.sh` line 93):
 ```
-HOME
 UPSTREAM
 OPENCLAW_STATE_DIR
 OPENCLAW_WORKSPACE_DIR
@@ -154,105 +147,34 @@ OPENCLAW_CONTROL_UI_ALLOWED_ORIGINS
 OPENCLAW_CONTROL_UI_ALLOW_INSECURE_AUTH
 OPENCLAW_GATEWAY_BIND
 OPENCLAW_PRIMARY_MODEL
-OPENCLAW_FALLBACK_MODELS
-OPENCLAW_IMAGE_MODEL_PRIMARY
-OPENCLAW_IMAGE_MODEL_FALLBACKS
 BROWSER_CDP_URL
 BROWSER_DEFAULT_PROFILE
-BROWSER_EVALUATE_ENABLED
-BROWSER_SNAPSHOT_MODE
-BROWSER_REMOTE_TIMEOUT_MS
-BROWSER_REMOTE_HANDSHAKE_TIMEOUT_MS
 WHATSAPP_ENABLED
 WHATSAPP_DM_POLICY
 WHATSAPP_ALLOW_FROM
-WHATSAPP_GROUP_POLICY
-WHATSAPP_GROUP_ALLOW_FROM
-WHATSAPP_SELF_CHAT_MODE
-WHATSAPP_MEDIA_MAX_MB
-WHATSAPP_HISTORY_LIMIT
 TELEGRAM_BOT_TOKEN
 TELEGRAM_DM_POLICY
-TELEGRAM_ALLOW_FROM
-TELEGRAM_GROUP_POLICY
-TELEGRAM_GROUP_ALLOW_FROM
 DISCORD_BOT_TOKEN
 DISCORD_DM_POLICY
-DISCORD_DM_ALLOW_FROM
-DISCORD_GROUP_POLICY
 SLACK_BOT_TOKEN
-SLACK_APP_TOKEN
 SLACK_DM_POLICY
-SLACK_GROUP_POLICY
 HOOKS_ENABLED
 HOOKS_TOKEN
 HOOKS_PATH
 ANTHROPIC_API_KEY
-ANTHROPIC_OAUTH_TOKEN
 OPENAI_API_KEY
 OPENROUTER_API_KEY
 GEMINI_API_KEY
-GOOGLE_API_KEY
 XAI_API_KEY
 GROQ_API_KEY
 MISTRAL_API_KEY
 CEREBRAS_API_KEY
 MOONSHOT_API_KEY
 KIMI_API_KEY
-KIMI_CODE_API_KEY
 ZAI_API_KEY
 OPENCODE_API_KEY
 COPILOT_GITHUB_TOKEN
 XIAOMI_API_KEY
-VENICE_API_KEY
-MINIMAX_API_KEY
-MINIMAX_OAUTH_TOKEN
-MINIMAX_OAUTH_REFRESH_TOKEN
-MINIMAX_OAUTH_CLIENT_ID
-AI_GATEWAY_API_KEY
-SYNTHETIC_API_KEY
-ZEROCLAW_API_KEY
-API_KEY
-GLM_API_KEY
-QIANFAN_API_KEY
-ARK_API_KEY
-DOUBAO_API_KEY
-QWEN_OAUTH_TOKEN
-DASHSCOPE_API_KEY
-QWEN_OAUTH_REFRESH_TOKEN
-DEEPSEEK_API_KEY
-TOGETHER_API_KEY
-FIREWORKS_API_KEY
-NOVITA_API_KEY
-PERPLEXITY_API_KEY
-COHERE_API_KEY
-LLAMACPP_API_KEY
-SGLANG_API_KEY
-VLLM_API_KEY
-OSAURUS_API_KEY
-NVIDIA_API_KEY
-VERCEL_API_KEY
-CLOUDFLARE_API_KEY
-OLLAMA_BASE_URL
-OLLAMA_API_KEY
-AWS_ACCESS_KEY_ID
-AWS_SECRET_ACCESS_KEY
-AWS_REGION
-AWS_SESSION_TOKEN
-AWS_DEFAULT_REGION
-BEDROCK_PROVIDER_FILTER
-DEEPGRAM_API_KEY
-OP_SERVICE_ACCOUNT_TOKEN
-GOG_KEYRING_PASSWORD
-ZEROCLAW_PROVIDER
-ZEROCLAW_MODEL
-ZEROCLAW_WORKSPACE
-ZEROCLAW_TEMPERATURE
-ZEROCLAW_GATEWAY_HOST
-ZEROCLAW_WHATSAPP_APP_SECRET
-ZEROCLAW_WHATSAPP_PAIR_PHONE
-ZEROCLAW_WHATSAPP_PAIR_CODE
-ZEROCLAW_WHATSAPP_ALLOWED_NUMBERS
 ```
 
 When adding new env vars to `configure.js`, **always add them to the whitelist** in `entrypoint.sh`.
@@ -388,24 +310,21 @@ Reference: https://github.com/zeroclaw-labs/zeroclaw/blob/main/dev/config.templa
 
 **Do NOT** use nested `[agents.defaults]` sections - ZeroClaw expects flat top-level fields.
 
-### ZeroClaw Browser/CDP Configuration
+## Screen and Systemd Support
 
-ZeroClaw reads `BROWSER_CDP_URL` from Docker Compose environment and generates a `[browser]` section in config.toml:
+The zeroclaw Dockerfile includes:
+- `screen` - Terminal multiplexer for interactive sessions
+- `systemd` and `dbus` - For service management
 
-```toml
-[browser]
-enabled = true
-backend = "agent_browser"
-native_webdriver_url = "http://browser:9222"
+These can be used for:
+- Interactive sessions: `screen -S mysession`
+- Manual service management (if needed): `systemctl status`
+
+## Zeroclaw Channel Start
+
+To start communication channels (WhatsApp, Telegram, etc.):
+```bash
+zeroclaw channel start
 ```
 
-The browser sidecar in docker-compose.yml exposes:
-- CDP on port 9222 (Chrome DevTools Protocol)
-- noVNC on port 6080 (web-based VNC viewer)
-
-To enable browser automation:
-1. Set `BROWSER_CDP_URL=http://browser:9222` in `.env`
-2. The browser sidecar container must be running
-3. ZeroClaw's agent_browser backend will connect to CDP
-
-**Note**: The `native_webdriver_url` field is repurposed for CDP endpoint in ZeroClaw's agent_browser backend.
+This command starts all enabled communication channels defined in the config.

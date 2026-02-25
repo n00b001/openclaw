@@ -191,7 +191,7 @@ jobs:
       - name: Mount sticky disk for Docker image
         uses: useblacksmith/stickydisk@v1
         with:
-          key: ${{ github.repository }}-${{ matrix.upstream }}-docker-image
+          key: ${{ github.repository }}-${{ matrix.upstream }}-docker-image-${{ github.run_id }}
           path: /mnt/docker-images
 
       - name: Determine version and tags
@@ -318,7 +318,7 @@ jobs:
       - name: Mount sticky disk for Docker image
         uses: useblacksmith/stickydisk@v1
         with:
-          key: ${{ github.repository }}-${{ matrix.upstream }}-docker-image
+          key: ${{ github.repository }}-${{ matrix.upstream }}-docker-image-${{ github.run_id }}
           path: /mnt/docker-images
 
       - name: Load Docker image
@@ -358,7 +358,7 @@ jobs:
       - name: Mount sticky disk for Docker image
         uses: useblacksmith/stickydisk@v1
         with:
-          key: ${{ github.repository }}-${{ matrix.upstream }}-docker-image
+          key: ${{ github.repository }}-${{ matrix.upstream }}-docker-image-${{ github.run_id }}
           path: /mnt/docker-images
 
       - name: Load Docker image
@@ -422,7 +422,7 @@ jobs:
       - name: Mount sticky disk for Docker image
         uses: useblacksmith/stickydisk@v1
         with:
-          key: ${{ github.repository }}-${{ matrix.upstream }}-docker-image
+          key: ${{ github.repository }}-${{ matrix.upstream }}-docker-image-${{ github.run_id }}
           path: /mnt/docker-images
 
       - name: Determine version and tags

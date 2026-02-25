@@ -168,7 +168,7 @@ This project builds Docker images for four upstream variants:
 | openclaw | Node.js | openclaw/openclaw | `pnpm build` |
 | picoclaw | Go | sipeed/picoclaw | `go build` |
 | ironclaw | Rust | nearai/ironclaw | `cargo build --release` |
-| zeroclaw | Rust | zeroclaw-labs/zeroclaw | `cargo build --profile release-fast --features whatsapp-web` |
+| zeroclaw | Rust | zeroclaw-labs/zeroclaw | `cargo build --release --features whatsapp-web` |
 
 When modifying CI workflows that use the upstream matrix, update ALL of:
 - `.github/workflows/docker-build.yml` (build, smoke-test, security-scan, push-to-ghcr jobs)
@@ -203,22 +203,32 @@ chown -R 10000:10000 /path/to/bind-mount
 ```
 User ID 10000 is the `zeroclaw` user inside the container.
 
-## ZeroClaw Browser/CDP Configuration
+## ZeroClaw Tools Available
 
-ZeroClaw uses Docker Compose environment variables for browser automation configuration:
+The ZeroClaw Docker image includes several useful tools:
 
-- **`BROWSER_CDP_URL`**: Chrome DevTools Protocol endpoint (e.g., `http://browser:9222`)
-  - Set this to enable browser automation via the browser sidecar container
-  - The browser sidecar exposes CDP on port 9222
-  - Docker Compose uses service name `browser` for DNS resolution
-
-The `configure-zeroclaw.js` script automatically generates the `[browser]` section in `config.toml` when `BROWSER_CDP_URL` is set:
-
-```toml
-[browser]
-enabled = true
-backend = "agent_browser"
-native_webdriver_url = "http://browser:9222"
+### screen
+Terminal multiplexer for interactive sessions:
+```bash
+docker exec -it <container> screen -S mysession
 ```
 
-**Reference**: https://github.com/zeroclaw-labs/zeroclaw/blob/main/docs/config-reference.md
+### systemctl and dbus
+Service management tools are available:
+```bash
+docker exec -it <container> systemctl status
+```
+
+Note: While systemd tools are installed, the container uses supervisord for service management. systemctl can be used for manual service inspection.
+
+### zeroclaw channel start
+To start communication channels (WhatsApp, Telegram, Discord, Slack):
+```bash
+docker exec -it <container> zeroclaw channel start
+```
+
+### Viewing Logs
+To see the pairing code and other logs:
+```bash
+docker logs <container> 2>&1 | grep -i "pair\|code\|token"
+```
