@@ -243,9 +243,8 @@ RUN rm -f /etc/nginx/sites-enabled/default \
     && chown -R ${UPSTREAM}:${UPSTREAM} /var/lib/nginx
 
 # Copy scripts and configuration
-# Use GIT_COMMIT to bust cache when source files change
-ARG GIT_COMMIT=unknown
-RUN echo "Cache bust: ${GIT_COMMIT}"
+# Copy configure-zeroclaw.js first to bust cache when it changes
+COPY --chown=${UPSTREAM}:${UPSTREAM} scripts/configure-zeroclaw.js /app/scripts/configure-zeroclaw.js
 COPY --chown=${UPSTREAM}:${UPSTREAM} scripts/ /app/scripts/
 COPY --chown=${UPSTREAM}:${UPSTREAM} nginx.conf /etc/nginx/sites-available/${UPSTREAM}
 RUN chmod +x /app/scripts/*.sh \
