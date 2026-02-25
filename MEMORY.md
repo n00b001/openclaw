@@ -17,7 +17,7 @@ When making ANY code changes, ALWAYS follow this workflow:
 
 This workflow is NON-NEGOTIABLE for all code changes.
 
-**IMPORTANT**: 
+**IMPORTANT**:
 - Always use worktrees for isolation
 - Always merge origin/main into your branch before pushing to avoid merge conflicts on the PR
 - If a PR has merge conflicts, fix them by merging main into the PR branch
