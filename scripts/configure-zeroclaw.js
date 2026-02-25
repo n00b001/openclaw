@@ -81,6 +81,16 @@ function buildConfig(STATE_DIR, WORKSPACE_DIR, parseList, PROVIDER_URLS, PROVIDE
             port: gatewayPort,
             host: gatewayHost,
             allow_public_bind: false
+        },
+        channels_config: {
+            whatsapp: {
+                session_path: '~/.zeroclaw/state/whatsapp-web/session.db',
+                pair_phone: process.env.ZEROCLAW_WHATSAPP_PAIR_PHONE || '',
+                pair_code: process.env.ZEROCLAW_WHATSAPP_PAIR_CODE || '',
+                allowed_numbers: process.env.ZEROCLAW_WHATSAPP_ALLOWED_NUMBERS
+                    ? process.env.ZEROCLAW_WHATSAPP_ALLOWED_NUMBERS.split(',').map(s => s.trim())
+                    : ['*']
+            }
         }
     };
 

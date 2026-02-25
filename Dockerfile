@@ -128,8 +128,8 @@ RUN if [ "${UPSTREAM}" = "picoclaw" ]; then \
     elif [ "${UPSTREAM}" = "zeroclaw" ]; then \
         echo "Building ZeroClaw (Rust binary)..."; \
         cd /build && \
-        cargo build --release --features whatsapp-web && \
-        mv target/release/zeroclaw /build/zeroclaw && \
+        cargo build --profile release-fast --features whatsapp-web && \
+        mv target/release-fast/zeroclaw /build/zeroclaw && \
         echo "ZeroClaw binary built successfully"; \
     else \
         echo "Building OpenClaw (Node.js)..."; \

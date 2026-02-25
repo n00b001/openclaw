@@ -56,11 +56,11 @@ RUN set -eux && \
         git clone --depth 1 --branch "${UPSTREAM_VERSION}" "https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}.git" .; \
     fi
 
-# Build ZeroClaw (Rust binary)
+# Build ZeroClaw (Rust binary) - use release-fast profile for faster builds
 RUN echo "Building ZeroClaw (Rust binary)..." && \
     cd /build && \
-    cargo build --release --features whatsapp-web && \
-    mv target/release/zeroclaw /build/zeroclaw && \
+    cargo build --profile release-fast --features whatsapp-web && \
+    mv target/release-fast/zeroclaw /build/zeroclaw && \
     echo "ZeroClaw binary built successfully"
 
 # Store upstream info for later stages

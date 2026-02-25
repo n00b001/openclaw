@@ -168,7 +168,7 @@ This project builds Docker images for four upstream variants:
 | openclaw | Node.js | openclaw/openclaw | `pnpm build` |
 | picoclaw | Go | sipeed/picoclaw | `go build` |
 | ironclaw | Rust | nearai/ironclaw | `cargo build --release` |
-| zeroclaw | Rust | zeroclaw-labs/zeroclaw | `cargo build --release --features whatsapp-web` |
+| zeroclaw | Rust | zeroclaw-labs/zeroclaw | `cargo build --profile release-fast --features whatsapp-web` |
 
 When modifying CI workflows that use the upstream matrix, update ALL of:
 - `.github/workflows/docker-build.yml` (build, smoke-test, security-scan, push-to-ghcr jobs)
