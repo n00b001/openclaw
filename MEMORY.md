@@ -387,3 +387,25 @@ allow_public_bind = false
 Reference: https://github.com/zeroclaw-labs/zeroclaw/blob/main/dev/config.template.toml
 
 **Do NOT** use nested `[agents.defaults]` sections - ZeroClaw expects flat top-level fields.
+
+### ZeroClaw Browser/CDP Configuration
+
+ZeroClaw reads `BROWSER_CDP_URL` from Docker Compose environment and generates a `[browser]` section in config.toml:
+
+```toml
+[browser]
+enabled = true
+backend = "agent_browser"
+native_webdriver_url = "http://browser:9222"
+```
+
+The browser sidecar in docker-compose.yml exposes:
+- CDP on port 9222 (Chrome DevTools Protocol)
+- noVNC on port 6080 (web-based VNC viewer)
+
+To enable browser automation:
+1. Set `BROWSER_CDP_URL=http://browser:9222` in `.env`
+2. The browser sidecar container must be running
+3. ZeroClaw's agent_browser backend will connect to CDP
+
+**Note**: The `native_webdriver_url` field is repurposed for CDP endpoint in ZeroClaw's agent_browser backend.

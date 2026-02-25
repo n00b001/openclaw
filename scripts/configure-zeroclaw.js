@@ -94,6 +94,15 @@ function buildConfig(STATE_DIR, WORKSPACE_DIR, parseList, PROVIDER_URLS, PROVIDE
         }
     };
 
+    const browserCdpUrl = process.env.BROWSER_CDP_URL;
+    if (browserCdpUrl) {
+        config.browser = {
+            enabled: true,
+            backend: 'agent_browser',
+            native_webdriver_url: browserCdpUrl
+        };
+    }
+
     return config;
 }
 

@@ -202,3 +202,23 @@ When running interactive commands via `docker exec`:
 chown -R 10000:10000 /path/to/bind-mount
 ```
 User ID 10000 is the `zeroclaw` user inside the container.
+
+## ZeroClaw Browser/CDP Configuration
+
+ZeroClaw uses Docker Compose environment variables for browser automation configuration:
+
+- **`BROWSER_CDP_URL`**: Chrome DevTools Protocol endpoint (e.g., `http://browser:9222`)
+  - Set this to enable browser automation via the browser sidecar container
+  - The browser sidecar exposes CDP on port 9222
+  - Docker Compose uses service name `browser` for DNS resolution
+
+The `configure-zeroclaw.js` script automatically generates the `[browser]` section in `config.toml` when `BROWSER_CDP_URL` is set:
+
+```toml
+[browser]
+enabled = true
+backend = "agent_browser"
+native_webdriver_url = "http://browser:9222"
+```
+
+**Reference**: https://github.com/zeroclaw-labs/zeroclaw/blob/main/docs/config-reference.md
