@@ -147,7 +147,7 @@ function buildConfig(STATE_DIR, WORKSPACE_DIR, parseList, PROVIDER_URLS, PROVIDE
     // Add WhatsApp Web configuration if enabled
     if (process.env.WHATSAPP_ENABLED === 'true') {
         config.channels_config.whatsapp = {
-            session_path: `${STATE_DIR}/state/whatsapp-web/session.db`,
+            session_path: '~/.zeroclaw/state/whatsapp-web/session.db',
             pair_phone: process.env.ZEROCLAW_WHATSAPP_PAIR_PHONE || '',
             pair_code: process.env.ZEROCLAW_WHATSAPP_PAIR_CODE || '',
             allowed_numbers: ['*'],

@@ -452,12 +452,18 @@ node /app/scripts/configure.js
 # =============================================================================
 # Fix legacy config keys
 # =============================================================================
-log_info "Running $CLI_NAME doctor..."
-# Only openclaw supports --fix flag; other upstreams just run basic doctor
-if [ "$IS_NODEJS_UPSTREAM" = true ]; then
-    "/usr/local/bin/$CLI_NAME" doctor --fix || true
+# Skip doctor for zeroclaw - it modifies config and adds incomplete channels_config
+# that causes "missing field `cli`" error
+if [ "$UPSTREAM" = "zeroclaw" ]; then
+    log_info "Skipping $CLI_NAME doctor - config already generated"
 else
-    "/usr/local/bin/$CLI_NAME" doctor || true
+    log_info "Running $CLI_NAME doctor..."
+    # Only openclaw supports --fix flag; other upstreams just run basic doctor
+    if [ "$IS_NODEJS_UPSTREAM" = true ]; then
+        "/usr/local/bin/$CLI_NAME" doctor --fix || true
+    else
+        "/usr/local/bin/$CLI_NAME" doctor || true
+    fi
 fi
 
 # Determine the correct HOME directory for supervisord
