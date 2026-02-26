@@ -359,3 +359,19 @@ ZeroClaw uses permissive defaults for full autonomy mode. Key settings in `scrip
 ### Gateway Settings
 - `gateway.require_pairing: false` - No pairing required
 - `gateway.trust_forwarded_headers: true` - Trust X-Forwarded-* headers
+
+### ZeroClaw Runtime Mode
+
+ZeroClaw runs via `zeroclaw daemon` (not `zeroclaw gateway`) in Docker:
+
+| Command | Purpose |
+|---------|---------|
+| `zeroclaw gateway` | HTTP webhook server only (no channels) |
+| `zeroclaw daemon` | **Full runtime** - gateway + channels + scheduler + heartbeat |
+
+**Important**: The daemon does NOT read `gateway.port` from config - you must pass `-p <port>` explicitly:
+```bash
+zeroclaw daemon -p 18789
+```
+
+This is why channels weren't starting automatically with `zeroclaw gateway` - channels require the daemon runtime.
