@@ -485,7 +485,7 @@ mkdir -p /var/log/supervisor
 # Each upstream has different CLI for starting the gateway:
 # - OpenClaw: openclaw gateway --port X --bind Y
 # - PicoClaw: picoclaw gateway --port X
-# - ZeroClaw: zeroclaw gateway --port X
+# - ZeroClaw: zeroclaw daemon (full runtime with gateway, channels, scheduler)
 # - IronClaw: ironclaw (no gateway subcommand - just runs agent with all channels)
 case "$UPSTREAM" in
     openclaw)
@@ -495,11 +495,9 @@ case "$UPSTREAM" in
         GATEWAY_CMD="/usr/local/bin/$CLI_NAME gateway --port ${INTERNAL_GATEWAY_PORT}"
         ;;
     zeroclaw)
-        GATEWAY_CMD="/usr/local/bin/$CLI_NAME gateway --port ${INTERNAL_GATEWAY_PORT}"
+        GATEWAY_CMD="/usr/local/bin/$CLI_NAME daemon"
         ;;
     ironclaw)
-        # IronClaw has no 'gateway' subcommand - just run the binary
-        # It starts REPL, HTTP webhooks, and web gateway together
         GATEWAY_CMD="/usr/local/bin/$CLI_NAME"
         ;;
     *)
