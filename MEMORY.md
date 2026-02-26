@@ -539,7 +539,7 @@ ZeroClaw is configured with the following model defaults (in `scripts/configure-
 
 **Problem:** Even with `require_pairing: false` in config, the ZeroClaw UI still shows the pairing screen.
 
-**Root Cause:** The nginx config didn't disable HTTP Basic Auth for the `/health` endpoint. The UI calls `/health` to check if pairing is required:
+**Root Cause 1:** The nginx config didn't disable HTTP Basic Auth for the `/health` endpoint. The UI calls `/health` to check if pairing is required:
 ```javascript
 // web/src/hooks/useAuth.tsx
 getPublicHealth()
@@ -552,11 +552,26 @@ getPublicHealth()
 
 If `/health` returns 401 (due to HTTP Basic Auth), the UI falls through to showing the pairing screen.
 
-**Fix:** Added `auth_basic off;` to the following nginx locations in `scripts/entrypoint.sh`:
+**Fix 1:** Added `auth_basic off;` to the following nginx locations in `scripts/entrypoint.sh`:
 - `/healthz` - Health check endpoint
 - `/health` - ZeroClaw health endpoint (returns `require_pairing` status)
 - `/pair` - Pairing endpoint (used by UI to submit pairing codes)
 - `/hooks` - Webhook endpoint (token-based auth)
+
+**Root Cause 2:** ZeroClaw UI checks the `paired` field instead of `require_pairing`. When `require_pairing: false`, the backend returns `paired: false`, and the UI shows the pairing screen.
+
+**Fix 2:** Added nginx `sub_filter` to modify the `/health` response for ZeroClaw only:
+```nginx
+location /health {
+    ...
+    proxy_buffering on;
+    sub_filter_types application/json;
+    sub_filter '"paired":false,"require_pairing":false' '"paired":true,"require_pairing":false';
+    sub_filter_once off;
+}
+```
+
+This rewrites the response to set `paired: true` when `require_pairing: false`, making the UI skip the pairing screen.
 
 **Related endpoints that must NOT have auth_basic:**
 - `/health` - UI checks `require_pairing` status here

@@ -141,6 +141,20 @@ if [ "$(id -u)" = "0" ] && [ "${ZEROCLAW_ROOT_MODE:-}" != "1" ]; then
     EXTERNAL_GATEWAY_PORT="${OPENCLAW_EXTERNAL_GATEWAY_PORT:-8080}"
     INTERNAL_GATEWAY_PORT="${OPENCLAW_INTERNAL_GATEWAY_PORT:-18789}"
 
+    # For ZeroClaw: modify /health response to fix UI pairing check bug
+    # ZeroClaw UI checks "paired" instead of "require_pairing", causing
+    # the pairing screen to show even when pairing is disabled.
+    # Workaround: use nginx sub_filter to set paired=true when require_pairing=false
+    # shellcheck disable=SC2034
+    if [ "$UPSTREAM" = "zeroclaw" ]; then
+        NGINX_HEALTH_SUBFILTER='        proxy_buffering on;
+        sub_filter_types application/json;
+        sub_filter '\''"paired":false,"require_pairing":false'\'' '\''"paired":true,"require_pairing":false'\'';
+        sub_filter_once off;'
+    else
+        NGINX_HEALTH_SUBFILTER=""
+    fi
+
     # Configure nginx while still root (requires write access to /etc/nginx)
     log_info "Configuring Nginx..."
     # Remove any existing nginx configs to avoid conflicts
@@ -198,6 +212,7 @@ server {
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
         access_log off;
+$NGINX_HEALTH_SUBFILTER
     }
 
     # Pairing endpoint (no auth required - used by UI to submit pairing codes)

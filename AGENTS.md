@@ -278,3 +278,13 @@ The ZeroClaw UI checks `/health` to determine if pairing is required. These endp
 - `/hooks` - External webhooks (uses token auth)
 
 If the UI shows the pairing screen even when `require_pairing: false`, check that these locations have `auth_basic off;` in `scripts/entrypoint.sh`.
+
+### ZeroClaw UI Pairing Bug Workaround
+
+ZeroClaw UI has a bug where it checks the `paired` field instead of `require_pairing` from the `/health` endpoint. When `require_pairing: false`, the backend returns `paired: false`, causing the UI to show the pairing screen.
+
+**Workaround**: The nginx config in `scripts/entrypoint.sh` uses `sub_filter` to modify the `/health` response for ZeroClaw:
+- Before: `{"paired":false,"require_pairing":false,...}`
+- After: `{"paired":true,"require_pairing":false,...}`
+
+This makes the UI skip the pairing screen when pairing is disabled. The workaround is only applied when `UPSTREAM=zeroclaw`.
