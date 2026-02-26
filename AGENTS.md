@@ -232,3 +232,19 @@ To see the pairing code and other logs:
 ```bash
 docker logs <container> 2>&1 | grep -i "pair\|code\|token"
 ```
+
+## ZeroClaw Default Configuration
+
+ZeroClaw uses permissive defaults for full autonomy. Key settings in `scripts/configure-zeroclaw.js`:
+
+- **Autonomy level**: `full` (not supervised)
+- **Auto-approve**: All tool calls (`['*']`)
+- **Shell env passthrough**: Common env vars (PATH, HOME, USER, etc.) - **must be specific names, not `*` wildcard**
+- **Enabled tools**: browser, http_request, web_fetch, web_search, composio
+- **Browser CDP**: `http://openclaw-browser:9222` (for docker-compose setup)
+- **Gateway**: No pairing required, trust forwarded headers
+
+When modifying ZeroClaw config, ensure:
+1. `shell_env_passthrough` uses valid env var names (`[A-Za-z_][A-Za-z0-9_]*`)
+2. Test locally with `pre-commit run --all-files`
+3. Monitor smoke tests for config validation errors
