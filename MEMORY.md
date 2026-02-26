@@ -375,3 +375,40 @@ zeroclaw daemon -p 18789
 ```
 
 This is why channels weren't starting automatically with `zeroclaw gateway` - channels require the daemon runtime.
+
+## Supervisord Logging for Docker
+
+The container uses supervisord to manage nginx and the upstream gateway. For `docker logs` to capture output:
+
+**Configuration in `scripts/entrypoint.sh`:**
+```ini
+[supervisord]
+nodaemon=true
+logfile=/dev/null        # Don't log supervisord itself to file
+pidfile=/tmp/supervisord.pid
+
+[program:nginx]
+command=nginx -g "daemon off;"
+user=$UPSTREAM
+stdout_logfile=NONE      # Don't capture stdout - let it go to container
+stderr_logfile=NONE      # Don't capture stderr - let it go to container
+
+[program:$UPSTREAM]
+command=$GATEWAY_CMD
+user=$UPSTREAM
+stdout_logfile=NONE
+stderr_logfile=NONE
+```
+
+**Key points:**
+- `stdout_logfile=NONE` and `stderr_logfile=NONE` disable supervisord's log capture
+- Child process output goes directly to supervisord's stdout/stderr, which Docker captures
+- `user=$UPSTREAM` in program configs drops privileges for each service
+- Do NOT use `user=` in `[supervisord]` section - supervisord runs as the entrypoint user (after `su`)
+- Removed `/var/log/supervisor` directory since logs go to Docker now
+
+**Why this works:**
+- The entrypoint runs as root, then `exec su` to switch to `$UPSTREAM` user
+- Supervisord runs as the switched user (not root)
+- `NONE` tells supervisord to not intercept stdout/stderr, letting them pass through
+- Docker captures the container's stdout/stderr automatically
