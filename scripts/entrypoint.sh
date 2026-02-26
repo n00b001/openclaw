@@ -94,7 +94,7 @@ esac
 # =============================================================================
 # Fix permissions if running as root (for bind mounts)
 # =============================================================================
-if [ "$(id -u)" = "0" ]; then
+if [ "$(id -u)" = "0" ] && [ "${ZEROCLAW_ROOT_MODE:-}" != "1" ]; then
     log_info "Running as root, fixing permissions for $UPSTREAM user..."
 
     # Check that user exists before proceeding
@@ -303,8 +303,17 @@ NGINX_EOF
     # Clean up nginx pid file created by nginx -t (runs as root, but supervisor runs as user)
     rm -f /tmp/nginx.pid /run/nginx.pid 2>/dev/null || true
 
-    log_info "Switching to $UPSTREAM user..."
-    exec su -s /bin/bash --whitelist-environment=HOME,UPSTREAM,OPENCLAW_STATE_DIR,OPENCLAW_WORKSPACE_DIR,OPENCLAW_EXTERNAL_GATEWAY_PORT,OPENCLAW_INTERNAL_GATEWAY_PORT,OPENCLAW_GATEWAY_TOKEN,AUTH_USERNAME,AUTH_PASSWORD,OPENCLAW_CONTROL_UI_ALLOWED_ORIGINS,OPENCLAW_CONTROL_UI_ALLOW_INSECURE_AUTH,OPENCLAW_GATEWAY_BIND,OPENCLAW_PRIMARY_MODEL,OPENCLAW_FALLBACK_MODELS,OPENCLAW_IMAGE_MODEL_PRIMARY,OPENCLAW_IMAGE_MODEL_FALLBACKS,BROWSER_CDP_URL,BROWSER_DEFAULT_PROFILE,BROWSER_EVALUATE_ENABLED,BROWSER_SNAPSHOT_MODE,BROWSER_REMOTE_TIMEOUT_MS,BROWSER_REMOTE_HANDSHAKE_TIMEOUT_MS,WHATSAPP_ENABLED,WHATSAPP_DM_POLICY,WHATSAPP_ALLOW_FROM,WHATSAPP_GROUP_POLICY,WHATSAPP_GROUP_ALLOW_FROM,WHATSAPP_SELF_CHAT_MODE,WHATSAPP_MEDIA_MAX_MB,WHATSAPP_HISTORY_LIMIT,TELEGRAM_BOT_TOKEN,TELEGRAM_DM_POLICY,TELEGRAM_ALLOW_FROM,TELEGRAM_GROUP_POLICY,TELEGRAM_GROUP_ALLOW_FROM,DISCORD_BOT_TOKEN,DISCORD_DM_POLICY,DISCORD_DM_ALLOW_FROM,DISCORD_GROUP_POLICY,SLACK_BOT_TOKEN,SLACK_APP_TOKEN,SLACK_DM_POLICY,SLACK_GROUP_POLICY,HOOKS_ENABLED,HOOKS_TOKEN,HOOKS_PATH,ANTHROPIC_API_KEY,OPENAI_API_KEY,OPENROUTER_API_KEY,GEMINI_API_KEY,XAI_API_KEY,GROQ_API_KEY,MISTRAL_API_KEY,CEREBRAS_API_KEY,MOONSHOT_API_KEY,KIMI_API_KEY,ZAI_API_KEY,OPENCODE_API_KEY,COPILOT_GITHUB_TOKEN,XIAOMI_API_KEY,VENICE_API_KEY,MINIMAX_API_KEY,AI_GATEWAY_API_KEY,SYNTHETIC_API_KEY,ZEROCLAW_API_KEY,AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY,AWS_REGION,AWS_SESSION_TOKEN,BEDROCK_PROVIDER_FILTER,OLLAMA_BASE_URL,DEEPGRAM_API_KEY,OP_SERVICE_ACCOUNT_TOKEN,GOG_KEYRING_PASSWORD,ZEROCLAW_PROVIDER,ZEROCLAW_MODEL,ZEROCLAW_WORKSPACE,ZEROCLAW_TEMPERATURE,ZEROCLAW_GATEWAY_HOST,ZEROCLAW_WHATSAPP_APP_SECRET "$UPSTREAM" -c 'cd /data && /app/scripts/entrypoint.sh'
+    # For ZeroClaw, run supervisord as root (uses user= in program sections for privilege dropping)
+    # This allows stdout/stderr redirection to work properly for Docker logs
+    # For other upstreams, switch to the upstream user as before
+    if [ "$UPSTREAM" = "zeroclaw" ] && [ "${ZEROCLAW_ROOT_MODE:-}" != "1" ]; then
+        log_info "Running supervisord as root for ZeroClaw (user= in program sections)..."
+        export ZEROCLAW_ROOT_MODE=1
+        exec "$0" "$@"
+    elif [ "$UPSTREAM" != "zeroclaw" ]; then
+        log_info "Switching to $UPSTREAM user..."
+        exec su -s /bin/bash --whitelist-environment=HOME,UPSTREAM,OPENCLAW_STATE_DIR,OPENCLAW_WORKSPACE_DIR,OPENCLAW_EXTERNAL_GATEWAY_PORT,OPENCLAW_INTERNAL_GATEWAY_PORT,OPENCLAW_GATEWAY_TOKEN,AUTH_USERNAME,AUTH_PASSWORD,OPENCLAW_CONTROL_UI_ALLOWED_ORIGINS,OPENCLAW_CONTROL_UI_ALLOW_INSECURE_AUTH,OPENCLAW_GATEWAY_BIND,OPENCLAW_PRIMARY_MODEL,OPENCLAW_FALLBACK_MODELS,OPENCLAW_IMAGE_MODEL_PRIMARY,OPENCLAW_IMAGE_MODEL_FALLBACKS,BROWSER_CDP_URL,BROWSER_DEFAULT_PROFILE,BROWSER_EVALUATE_ENABLED,BROWSER_SNAPSHOT_MODE,BROWSER_REMOTE_TIMEOUT_MS,BROWSER_REMOTE_HANDSHAKE_TIMEOUT_MS,WHATSAPP_ENABLED,WHATSAPP_DM_POLICY,WHATSAPP_ALLOW_FROM,WHATSAPP_GROUP_POLICY,WHATSAPP_GROUP_ALLOW_FROM,WHATSAPP_SELF_CHAT_MODE,WHATSAPP_MEDIA_MAX_MB,WHATSAPP_HISTORY_LIMIT,TELEGRAM_BOT_TOKEN,TELEGRAM_DM_POLICY,TELEGRAM_ALLOW_FROM,TELEGRAM_GROUP_POLICY,TELEGRAM_GROUP_ALLOW_FROM,DISCORD_BOT_TOKEN,DISCORD_DM_POLICY,DISCORD_DM_ALLOW_FROM,DISCORD_GROUP_POLICY,SLACK_BOT_TOKEN,SLACK_APP_TOKEN,SLACK_DM_POLICY,SLACK_GROUP_POLICY,HOOKS_ENABLED,HOOKS_TOKEN,HOOKS_PATH,ANTHROPIC_API_KEY,OPENAI_API_KEY,OPENROUTER_API_KEY,GEMINI_API_KEY,XAI_API_KEY,GROQ_API_KEY,MISTRAL_API_KEY,CEREBRAS_API_KEY,MOONSHOT_API_KEY,KIMI_API_KEY,ZAI_API_KEY,OPENCODE_API_KEY,COPILOT_GITHUB_TOKEN,XIAOMI_API_KEY,VENICE_API_KEY,MINIMAX_API_KEY,AI_GATEWAY_API_KEY,SYNTHETIC_API_KEY,ZEROCLAW_API_KEY,AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY,AWS_REGION,AWS_SESSION_TOKEN,BEDROCK_PROVIDER_FILTER,OLLAMA_BASE_URL,DEEPGRAM_API_KEY,OP_SERVICE_ACCOUNT_TOKEN,GOG_KEYRING_PASSWORD,ZEROCLAW_PROVIDER,ZEROCLAW_MODEL,ZEROCLAW_WORKSPACE,ZEROCLAW_TEMPERATURE,ZEROCLAW_GATEWAY_HOST,ZEROCLAW_WHATSAPP_APP_SECRET "$UPSTREAM" -c 'cd /data && /app/scripts/entrypoint.sh'
+    fi
 fi
 
 # =============================================================================
@@ -425,7 +434,7 @@ mkdir -p "$STATE_DIR/identity"
 mkdir -p /var/lib/nginx/body /var/lib/nginx/proxy /var/lib/nginx/fastcgi 2>/dev/null || true
 
 # Set proper permissions
-chmod 700 "$STATE_DIR"
+chmod 700 "$STATE_DIR" 2>/dev/null || true
 chmod 700 "$STATE_DIR/credentials" 2>/dev/null || true
 
 # =============================================================================
@@ -447,6 +456,14 @@ fi
 # =============================================================================
 log_info "Generating $UPSTREAM configuration..."
 node /app/scripts/configure.js
+
+# For ZeroClaw running as root, ensure config files are readable by zeroclaw user
+if [ "$UPSTREAM" = "zeroclaw" ] && [ "$(id -u)" = "0" ]; then
+    log_info "Fixing config file permissions for zeroclaw user..."
+    chown -R zeroclaw:zeroclaw "$STATE_DIR" 2>/dev/null || true
+    chmod 755 "$STATE_DIR" 2>/dev/null || true
+    chmod 644 "$STATE_DIR/config.toml" 2>/dev/null || true
+fi
 
 # =============================================================================
 # Fix legacy config keys
@@ -503,6 +520,8 @@ case "$UPSTREAM" in
         ;;
 esac
 
+mkdir -p /var/log/supervisor
+
 cat > "$STATE_DIR/supervisord.conf" << EOF
 [supervisord]
 nodaemon=true
@@ -522,8 +541,10 @@ autostart=true
 autorestart=true
 priority=10
 user=$UPSTREAM
-stdout_logfile=NONE
-stderr_logfile=NONE
+stdout_logfile=/dev/stdout
+stdout_logfile_maxbytes=0
+stderr_logfile=/dev/stderr
+stderr_logfile_maxbytes=0
 
 [program:$UPSTREAM]
 command=$GATEWAY_CMD
@@ -531,8 +552,10 @@ autostart=true
 autorestart=true
 priority=20
 user=$UPSTREAM
-stdout_logfile=NONE
-stderr_logfile=NONE
+stdout_logfile=/dev/stdout
+stdout_logfile_maxbytes=0
+stderr_logfile=/dev/stderr
+stderr_logfile_maxbytes=0
 environment=HOME="${SUPERVISOR_HOME}",OPENCLAW_STATE_DIR="${STATE_DIR}",OPENCLAW_WORKSPACE_DIR="${WORKSPACE_DIR}",OPENCLAW_GATEWAY_TOKEN="${OPENCLAW_GATEWAY_TOKEN}",OPENCLAW_INTERNAL_GATEWAY_PORT="${INTERNAL_GATEWAY_PORT}",NODE_ENV="production"
 EOF
 
