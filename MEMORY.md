@@ -503,12 +503,12 @@ stderr_logfile_maxbytes=0
 
 When generating TOML config files, keys containing special characters (like `/`) must be quoted.
 
-**Problem:** Keys like `zai-coding-plan/glm-5` fail with:
+**Problem:** Keys like `zai/glm-5` fail with:
 ```
 TOML parse error at line 83, column 16
    |
-83 | zai-coding-plan/glm-5 = ["kimi-code/kimi-k2.5", "gemini/gemini-3-pro"]
-   |                ^
+83 | zai/glm-5 = ["kimi-code/kimi-for-coding", "gemini/gemini-3.1-pro-preview-customtools"]
+   |            ^
    invalid unquoted key, expected letters, numbers, `-`, `_`
 ```
 
@@ -525,7 +525,7 @@ function toTomlKey(key) {
 
 **Valid TOML key output:**
 ```toml
-"zai-coding-plan/glm-5" = ["kimi-code/kimi-k2.5", "gemini/gemini-3-pro"]
+"zai/glm-5" = ["kimi-code/kimi-for-coding", "gemini/gemini-3.1-pro-preview-customtools"]
 ```
 
 ## ZeroClaw Default Model and Fallback Providers
@@ -533,7 +533,7 @@ function toTomlKey(key) {
 ZeroClaw is configured with the following model defaults (in `scripts/configure-zeroclaw.js`):
 
 **Primary model:**
-- `zai-coding-plan/glm-5` (z.ai glm coding plan)
+- `zai/glm-5` (Z.AI GLM-5)
 
 **Fallback providers:**
 - `kimi-code` - Kimi Code provider
@@ -542,7 +542,7 @@ ZeroClaw is configured with the following model defaults (in `scripts/configure-
 **Model fallback chain:**
 ```toml
 [model_fallbacks]
-"zai-coding-plan/glm-5" = ["kimi-code/kimi-k2.5", "gemini/gemini-3-pro"]
+"zai/glm-5" = ["kimi-code/kimi-for-coding", "gemini/gemini-3.1-pro-preview-customtools"]
 ```
 
 **Agent settings:**
