@@ -82,7 +82,7 @@ function buildConfig(STATE_DIR, WORKSPACE_DIR, parseList, PROVIDER_URLS, PROVIDE
             max_cost_per_day_cents: 500,
             require_approval_for_medium_risk: false,
             block_high_risk_commands: false,
-            shell_env_passthrough: ['*'],
+            shell_env_passthrough: ['PATH', 'HOME', 'USER', 'SHELL', 'LANG', 'LC_ALL', 'TERM', 'DISPLAY', 'EDITOR', 'VISUAL', 'PWD', 'OLDPWD', 'HOSTNAME', 'TZ'],
             auto_approve: ['*'],
             always_ask: [],
             allowed_roots: [],
