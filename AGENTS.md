@@ -7,17 +7,18 @@ This document provides guidelines for AI agents working on this repository.
 **IMPORTANT**: When making ANY code changes, ALWAYS follow this workflow:
 
 1. **Use worktrees** - Create a git worktree for isolation: `git worktree add ../polyclaw-worktrees/branch-name -b branch-name`
-2. **git pull** - Get latest changes from remote
-3. **Make changes** - Edit files as needed
-4. **Build locally** - Run `make build UPSTREAM=<upstream>` to build the Docker image locally
-5. **Test locally** - Run `make smoke-test UPSTREAM=<upstream>` to verify changes work
-6. **git add** - Stage the changes
-7. **git commit** - Commit with descriptive message
-8. **git push** - Push to remote
-9. **create PR** - Create a pull request using `gh pr create`
-10. **Monitor PR** - Watch the PR status and ensure all CI checks pass
-11. **Merge PR** - After CI succeeds and approval, merge the PR
-12. **Verify post-merge** - Ensure post-merge actions (builds, deployments) succeed
+2. **Merge origin/main** - Get latest changes: `git fetch origin main && git merge origin/main --no-edit`
+3. **Resolve conflicts** - Carefully merge conflicts, don't blindly discard their changes or your changes
+4. **Make changes** - Edit files as needed
+5. **Build locally** - Run `make build UPSTREAM=<upstream>` to build the Docker image locally
+6. **Test locally** - Run `make smoke-test UPSTREAM=<upstream>` to verify changes work
+7. **git add** - Stage the changes
+8. **git commit** - Commit with descriptive message
+9. **git push** - Push to remote
+10. **create PR** - Create a pull request using `gh pr create`
+11. **Monitor PR** - Watch the PR status and ensure all CI checks pass
+12. **Merge PR** - After CI succeeds and approval, merge the PR
+13. **Verify post-merge** - Ensure post-merge actions (builds, deployments) succeed
 
 This workflow is NON-NEGOTIABLE for all code changes.
 
@@ -36,7 +37,7 @@ This workflow is NON-NEGOTIABLE for all code changes.
 Before creating a PR, if origin/main has new commits:
 
 1. **Merge main into your branch**: `git fetch origin && git merge origin/main`
-2. **Resolve conflicts carefully**: 
+2. **Resolve conflicts carefully**:
    - Don't blindly discard their changes (origin/main)
    - Don't blindly discard your changes (your branch)
    - Review both sides and combine intelligently
@@ -286,3 +287,24 @@ When modifying ZeroClaw config, ensure:
 3. Build locally with `make build UPSTREAM=zeroclaw`
 4. Test locally with `make smoke-test UPSTREAM=zeroclaw`
 5. Monitor smoke tests for config validation errors
+
+### ZeroClaw Nginx Auth Configuration
+
+The ZeroClaw UI checks `/health` to determine if pairing is required. These endpoints must have `auth_basic off;` in nginx:
+
+- `/health` - UI checks `require_pairing` status
+- `/healthz` - Docker health check
+- `/pair` - UI submits pairing codes
+- `/hooks` - External webhooks (uses token auth)
+
+If the UI shows the pairing screen even when `require_pairing: false`, check that these locations have `auth_basic off;` in `scripts/entrypoint.sh`.
+
+### ZeroClaw UI Pairing Bug Workaround
+
+ZeroClaw UI has a bug where it checks the `paired` field instead of `require_pairing` from the `/health` endpoint. When `require_pairing: false`, the backend returns `paired: false`, causing the UI to show the pairing screen.
+
+**Workaround**: The nginx config in `scripts/entrypoint.sh` uses `sub_filter` to modify the `/health` response for ZeroClaw:
+- Before: `{"paired":false,"require_pairing":false,...}`
+- After: `{"paired":true,"require_pairing":false,...}`
+
+This makes the UI skip the pairing screen when pairing is disabled. The workaround is only applied when `UPSTREAM=zeroclaw`.

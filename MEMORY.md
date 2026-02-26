@@ -498,3 +498,97 @@ stderr_logfile_maxbytes=0
 - By running supervisord as root, it can open `/dev/stdout` successfully
 - The `user=` directive then drops privileges for child processes
 - Other upstreams (openclaw, picoclaw, ironclaw) use the traditional `su` approach
+
+## TOML Key Quoting
+
+When generating TOML config files, keys containing special characters (like `/`) must be quoted.
+
+**Problem:** Keys like `zai-coding-plan/glm-5` fail with:
+```
+TOML parse error at line 83, column 16
+   |
+83 | zai-coding-plan/glm-5 = ["kimi-code/kimi-k2.5", "gemini/gemini-3-pro"]
+   |                ^
+   invalid unquoted key, expected letters, numbers, `-`, `_`
+```
+
+**Solution:** The `toTomlKey()` function in `scripts/configure.js` quotes keys that don't match the TOML unquoted key pattern `^[A-Za-z_][A-Za-z0-9_-]*$`:
+```javascript
+function toTomlKey(key) {
+    if (/^[A-Za-z_][A-Za-z0-9_-]*$/.test(key)) {
+        return key;
+    }
+    const escaped = key.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+    return `"${escaped}"`;
+}
+```
+
+**Valid TOML key output:**
+```toml
+"zai-coding-plan/glm-5" = ["kimi-code/kimi-k2.5", "gemini/gemini-3-pro"]
+```
+
+## ZeroClaw Default Model and Fallback Providers
+
+ZeroClaw is configured with the following model defaults (in `scripts/configure-zeroclaw.js`):
+
+**Primary model:**
+- `zai-coding-plan/glm-5` (z.ai glm coding plan)
+
+**Fallback providers:**
+- `kimi-code` - Kimi Code provider
+- `gemini` - Google Gemini via AI Studio
+
+**Model fallback chain:**
+```toml
+[model_fallbacks]
+"zai-coding-plan/glm-5" = ["kimi-code/kimi-k2.5", "gemini/gemini-3-pro"]
+```
+
+**Agent settings:**
+- `max_tool_iterations: 1000` - High iteration limit for complex tasks
+- `max_history_messages: 500` - Large message history for context
+
+## ZeroClaw UI Pairing Check Bug
+
+**Problem:** Even with `require_pairing: false` in config, the ZeroClaw UI still shows the pairing screen.
+
+**Root Cause 1:** The nginx config didn't disable HTTP Basic Auth for the `/health` endpoint. The UI calls `/health` to check if pairing is required:
+```javascript
+// web/src/hooks/useAuth.tsx
+getPublicHealth()
+  .then((health) => {
+    if (!health.require_pairing) {
+      setAuthenticated(true);  // Should skip pairing screen
+    }
+  })
+```
+
+If `/health` returns 401 (due to HTTP Basic Auth), the UI falls through to showing the pairing screen.
+
+**Fix 1:** Added `auth_basic off;` to the following nginx locations in `scripts/entrypoint.sh`:
+- `/healthz` - Health check endpoint
+- `/health` - ZeroClaw health endpoint (returns `require_pairing` status)
+- `/pair` - Pairing endpoint (used by UI to submit pairing codes)
+- `/hooks` - Webhook endpoint (token-based auth)
+
+**Root Cause 2:** ZeroClaw UI checks the `paired` field instead of `require_pairing`. When `require_pairing: false`, the backend returns `paired: false`, and the UI shows the pairing screen.
+
+**Fix 2:** Added nginx `sub_filter` to modify the `/health` response for ZeroClaw only:
+```nginx
+location /health {
+    ...
+    proxy_buffering on;
+    sub_filter_types application/json;
+    sub_filter '"paired":false,"require_pairing":false' '"paired":true,"require_pairing":false';
+    sub_filter_once off;
+}
+```
+
+This rewrites the response to set `paired: true` when `require_pairing: false`, making the UI skip the pairing screen.
+
+**Related endpoints that must NOT have auth_basic:**
+- `/health` - UI checks `require_pairing` status here
+- `/pair` - UI submits pairing codes here
+- `/healthz` - Docker health check
+- `/hooks` - External webhooks (uses token auth, not HTTP Basic)

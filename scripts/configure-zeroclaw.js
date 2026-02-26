@@ -8,7 +8,7 @@
 // =============================================================================
 
 function buildConfig(STATE_DIR, WORKSPACE_DIR, parseList, PROVIDER_URLS, PROVIDER_MODELS) {
-    const primaryModel = process.env.OPENCLAW_PRIMARY_MODEL || 'zai/glm-5';
+    const primaryModel = process.env.OPENCLAW_PRIMARY_MODEL || 'zai-coding-plan/glm-5';
     const parts = primaryModel.split('/');
     const provider = parts.length > 1 ? parts[0] : 'zai';
     const model = parts.length > 1 ? parts.slice(1).join('/') : primaryModel;
@@ -138,13 +138,15 @@ function buildConfig(STATE_DIR, WORKSPACE_DIR, parseList, PROVIDER_URLS, PROVIDE
         reliability: {
             provider_retries: 2,
             provider_backoff_ms: 500,
-            fallback_providers: [],
+            fallback_providers: ['kimi-code', 'gemini'],
             api_keys: [],
             channel_initial_backoff_secs: 2,
             channel_max_backoff_secs: 60,
             scheduler_poll_secs: 15,
             scheduler_retries: 2,
-            model_fallbacks: {},
+            model_fallbacks: {
+                'zai-coding-plan/glm-5': ['kimi-code/kimi-k2.5', 'gemini/gemini-3-pro'],
+            },
         },
 
         scheduler: {
@@ -155,8 +157,8 @@ function buildConfig(STATE_DIR, WORKSPACE_DIR, parseList, PROVIDER_URLS, PROVIDE
 
         agent: {
             compact_context: true,
-            max_tool_iterations: 10,
-            max_history_messages: 50,
+            max_tool_iterations: 1000,
+            max_history_messages: 500,
             parallel_tools: true,
             tool_dispatcher: 'auto',
         },

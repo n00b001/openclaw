@@ -15,6 +15,13 @@ on:
   pull_request:
     branches:
       - main
+  workflow_dispatch:
+    inputs:
+      upstreams:
+        description: 'Upstreams to build (comma-separated, e.g., "zeroclaw,openclaw")'
+        required: false
+        default: ''
+        type: string
 
 env:
   REGISTRY: ghcr.io
@@ -49,6 +56,31 @@ jobs:
       - name: Detect which upstreams need building
         id: detect
         run: |
+          # Handle manual workflow dispatch
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            MANUAL_UPSTREAMS="${{ github.event.inputs.upstreams }}"
+            if [ -n "$MANUAL_UPSTREAMS" ]; then
+              # Convert comma-separated to JSON array
+              UPSTREAMS_JSON="["
+              FIRST="true"
+              IFS=',' read -ra UPSTREAM_ARRAY <<< "$MANUAL_UPSTREAMS"
+              for upstream in "${UPSTREAM_ARRAY[@]}"; do
+                upstream=$(echo "$upstream" | xargs)  # trim whitespace
+                [ "$FIRST" = "false" ] && UPSTREAMS_JSON="${UPSTREAMS_JSON},"
+                UPSTREAMS_JSON="${UPSTREAMS_JSON}\"${upstream}\""
+                FIRST="false"
+              done
+              UPSTREAMS_JSON="${UPSTREAMS_JSON}]"
+            else
+              # No upstreams specified, build zeroclaw by default
+              UPSTREAMS_JSON='["zeroclaw"]'
+            fi
+            echo "Manual trigger - upstreams: $UPSTREAMS_JSON"
+            echo "upstreams=$UPSTREAMS_JSON" >> $GITHUB_OUTPUT
+            echo "any_changes=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             BASE_SHA="${{ github.event.pull_request.base.sha }}"
             HEAD_SHA="${{ github.event.pull_request.head.sha }}"
