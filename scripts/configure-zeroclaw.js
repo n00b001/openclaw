@@ -8,9 +8,9 @@
 // =============================================================================
 
 function buildConfig(STATE_DIR, WORKSPACE_DIR, parseList, PROVIDER_URLS, PROVIDER_MODELS) {
-    const primaryModel = process.env.OPENCLAW_PRIMARY_MODEL || 'anthropic/claude-sonnet-4.6';
+    const primaryModel = process.env.OPENCLAW_PRIMARY_MODEL || 'zai/glm-5';
     const parts = primaryModel.split('/');
-    const provider = parts.length > 1 ? parts[0] : 'openrouter';
+    const provider = parts.length > 1 ? parts[0] : 'zai';
     const model = parts.length > 1 ? parts.slice(1).join('/') : primaryModel;
 
     const providerAliases = {
@@ -20,6 +20,7 @@ function buildConfig(STATE_DIR, WORKSPACE_DIR, parseList, PROVIDER_URLS, PROVIDE
     };
 
     const providerKeys = {
+        zai: process.env.ZAI_API_KEY,
         'kimi-code': process.env.KIMI_API_KEY,
         moonshot: process.env.KIMI_API_KEY,
         openrouter: process.env.OPENROUTER_API_KEY,
@@ -27,7 +28,6 @@ function buildConfig(STATE_DIR, WORKSPACE_DIR, parseList, PROVIDER_URLS, PROVIDE
         openai: process.env.OPENAI_API_KEY,
         gemini: process.env.GEMINI_API_KEY,
         zhipu: process.env.ZAI_API_KEY,
-        zai: process.env.ZAI_API_KEY,
         groq: process.env.GROQ_API_KEY,
         xai: process.env.XAI_API_KEY,
         mistral: process.env.MISTRAL_API_KEY,
@@ -76,7 +76,7 @@ function buildConfig(STATE_DIR, WORKSPACE_DIR, parseList, PROVIDER_URLS, PROVIDE
         autonomy: {
             level: 'full',
             workspace_only: true,
-            allowed_commands: ['git', 'npm', 'cargo', 'ls', 'cat', 'grep', 'find', 'echo', 'pwd', 'wc', 'head', 'tail', 'date'],
+            allowed_commands: ['*'],
             forbidden_paths: ['/etc', '/root', '/home', '/usr', '/bin', '/sbin', '/lib', '/opt', '/boot', '/dev', '/proc', '/sys', '/var', '/tmp', '~/.ssh', '~/.gnupg', '~/.aws', '~/.config'],
             max_actions_per_hour: 20,
             max_cost_per_day_cents: 500,
@@ -123,7 +123,7 @@ function buildConfig(STATE_DIR, WORKSPACE_DIR, parseList, PROVIDER_URLS, PROVIDE
         },
 
         runtime: {
-            kind: 'native',
+            kind: 'docker',
             docker: {
                 image: 'alpine:3.20',
                 network: 'none',
@@ -243,6 +243,7 @@ function buildConfig(STATE_DIR, WORKSPACE_DIR, parseList, PROVIDER_URLS, PROVIDE
         composio: {
             enabled: true,
             entity_id: 'default',
+            api_key: process.env.COMPOSIO_API_KEY || '',
         },
 
         secrets: {
@@ -251,7 +252,7 @@ function buildConfig(STATE_DIR, WORKSPACE_DIR, parseList, PROVIDER_URLS, PROVIDE
 
         browser: {
             enabled: true,
-            allowed_domains: [],
+            allowed_domains: ['*'],
             backend: 'agent_browser',
             native_headless: true,
             native_webdriver_url: 'http://openclaw-browser:9222',
@@ -321,7 +322,7 @@ function buildConfig(STATE_DIR, WORKSPACE_DIR, parseList, PROVIDER_URLS, PROVIDE
         hooks: {
             enabled: true,
             builtin: {
-                command_logger: false,
+                command_logger: true,
             },
         },
 

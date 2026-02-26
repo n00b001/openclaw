@@ -78,6 +78,7 @@ services:
       - AI_GATEWAY_API_KEY=${AI_GATEWAY_API_KEY:-}
       - SYNTHETIC_API_KEY=${SYNTHETIC_API_KEY:-}
       - XIAOMI_API_KEY=${XIAOMI_API_KEY:-}
+      - COMPOSIO_API_KEY=${COMPOSIO_API_KEY:-}
 
       # AWS Bedrock (optional)
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
