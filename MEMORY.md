@@ -328,3 +328,50 @@ zeroclaw channel start
 ```
 
 This command starts all enabled communication channels defined in the config.
+
+## ZeroClaw Default Configuration
+
+ZeroClaw uses permissive defaults for full autonomy mode. Key settings in `scripts/configure-zeroclaw.js`:
+
+### Autonomy Settings
+- `level: 'full'` - Full autonomy mode (not supervised)
+- `auto_approve: ['*']` - Auto-approve all tool calls
+- `require_approval_for_medium_risk: false` - No approval for medium-risk actions
+- `block_high_risk_commands: false` - Allow high-risk commands
+- `shell_env_passthrough: ['PATH', 'HOME', ...]` - Common env vars passed to shell
+
+**Note**: `shell_env_passthrough` cannot use `*` wildcard - it must be specific env var names matching `[A-Za-z_][A-Za-z0-9_]*` pattern.
+
+### Enabled Tools
+- `browser.enabled: true` - Browser automation enabled
+- `browser.native_webdriver_url: 'http://openclaw-browser:9222'` - CDP endpoint
+- `http_request.enabled: true` - HTTP requests enabled
+- `web_fetch.enabled: true` - Web fetching enabled
+- `web_search.enabled: true` - Web search enabled
+- `composio.enabled: true` - Composio integration enabled
+- `skills.open_skills_enabled: true` - Open skills enabled
+
+### Performance Settings
+- `agent.compact_context: true` - Compact context for better token usage
+- `agent.parallel_tools: true` - Execute tools in parallel
+- `heartbeat.enabled: true` - Enable heartbeat monitoring
+
+### Gateway Settings
+- `gateway.require_pairing: false` - No pairing required
+- `gateway.trust_forwarded_headers: true` - Trust X-Forwarded-* headers
+
+### ZeroClaw Runtime Mode
+
+ZeroClaw runs via `zeroclaw daemon` (not `zeroclaw gateway`) in Docker:
+
+| Command | Purpose |
+|---------|---------|
+| `zeroclaw gateway` | HTTP webhook server only (no channels) |
+| `zeroclaw daemon` | **Full runtime** - gateway + channels + scheduler + heartbeat |
+
+**Important**: The daemon does NOT read `gateway.port` from config - you must pass `-p <port>` explicitly:
+```bash
+zeroclaw daemon -p 18789
+```
+
+This is why channels weren't starting automatically with `zeroclaw gateway` - channels require the daemon runtime.
