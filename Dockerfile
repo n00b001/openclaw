@@ -26,6 +26,7 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # Build arguments for upstream selection
 ARG UPSTREAM=openclaw
 ARG UPSTREAM_VERSION=main
+ARG UPSTREAM_COMMIT
 
 # Install build dependencies with retry logic for transient network issues
 RUN for i in 1 2 3; do \
@@ -65,6 +66,7 @@ RUN npm install -g corepack@0.34.6 --force && corepack enable
 WORKDIR /build
 
 # Clone based on upstream type and version
+# UPSTREAM_COMMIT takes precedence over UPSTREAM_VERSION for reproducible builds
 RUN set -eux && \
     if [ "${UPSTREAM}" = "picoclaw" ]; then \
         GITHUB_OWNER="sipeed"; \
@@ -79,9 +81,16 @@ RUN set -eux && \
         GITHUB_OWNER="openclaw"; \
         GITHUB_REPO="openclaw"; \
     fi && \
-    if [ "${UPSTREAM_VERSION}" = "oc_main" ] || [ "${UPSTREAM_VERSION}" = "pc_main" ] || [ "${UPSTREAM_VERSION}" = "ic_main" ] || [ "${UPSTREAM_VERSION}" = "zc_main" ]; then \
+    if [ -n "${UPSTREAM_COMMIT}" ]; then \
+        echo "Cloning at pinned commit: ${UPSTREAM_COMMIT}"; \
+        git clone --depth 1 "https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}.git" . && \
+        git fetch --depth 1 origin "${UPSTREAM_COMMIT}" && \
+        git checkout "${UPSTREAM_COMMIT}"; \
+    elif [ "${UPSTREAM_VERSION}" = "oc_main" ] || [ "${UPSTREAM_VERSION}" = "pc_main" ] || [ "${UPSTREAM_VERSION}" = "ic_main" ] || [ "${UPSTREAM_VERSION}" = "zc_main" ]; then \
+        echo "WARNING: Building from latest main - not reproducible!"; \
         git clone --depth 1 --branch main "https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}.git" .; \
     else \
+        echo "Cloning at tag: ${UPSTREAM_VERSION}"; \
         git clone --depth 1 --branch "${UPSTREAM_VERSION}" "https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}.git" .; \
     fi
 

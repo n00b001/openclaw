@@ -217,43 +217,30 @@ jobs:
             XFANTH_TAG="xfanth_main"
           fi
 
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            LATEST_TAG=$(curl -s https://api.github.com/repos/${OWNER}/${REPO}/releases/latest | jq -r '.tag_name // empty')
-            if [ -n "$LATEST_TAG" ] && [ "$LATEST_TAG" != "null" ]; then
-              UPSTREAM_VERSION="$LATEST_TAG"
-              UPSTREAM_TAG="${UPSTREAM}_$LATEST_TAG"
-            else
-              UPSTREAM_VERSION="${PREFIX}_main"
-              UPSTREAM_TAG="${UPSTREAM}_main"
-            fi
-          else
-            BASE_COMMIT="${{ github.event.before }}"
-            TAGGED_FILE=".${UPSTREAM}-tagged-commit"
-            MAIN_FILE=".${UPSTREAM}-main-commit"
-            TAGGED_CHANGED=$(git diff --name-only $BASE_COMMIT HEAD 2>/dev/null | grep -q "^${TAGGED_FILE}$" && echo "true" || echo "false")
-            MAIN_CHANGED=$(git diff --name-only $BASE_COMMIT HEAD 2>/dev/null | grep -q "^${MAIN_FILE}$" && echo "true" || echo "false")
+          # Always read commit from tracking file - this ensures reproducible builds
+          COMMIT_FILE=".${UPSTREAM}-main-commit"
+          TRACKED_COMMIT=$(cat "$COMMIT_FILE" 2>/dev/null || echo "")
 
-            if [ "$TAGGED_CHANGED" = "true" ]; then
-              TRACKED_COMMIT=$(cat "$TAGGED_FILE" 2>/dev/null || echo "")
-              if [ -n "$TRACKED_COMMIT" ]; then
-                TAG=$(curl -s "https://api.github.com/repos/${OWNER}/${REPO}/git/refs/tags" | \
-                  jq -r --arg commit "$TRACKED_COMMIT" '.[] | select(.object.sha == $commit or .object.object.sha == $commit) | .ref' | \
-                  sed 's|refs/tags/||' | head -n1)
-              fi
-              if [ -z "$TAG" ]; then
-                TAG=$(curl -s "https://api.github.com/repos/${OWNER}/${REPO}/releases/latest" | jq -r '.tag_name // empty')
-              fi
-              if [ -n "$TAG" ] && [ "$TAG" != "null" ]; then
-                UPSTREAM_VERSION="$TAG"
-                UPSTREAM_TAG="${UPSTREAM}_$TAG"
-              else
-                UPSTREAM_VERSION="${PREFIX}_main"
-                UPSTREAM_TAG="${UPSTREAM}_main"
-              fi
-            else
-              UPSTREAM_VERSION="${PREFIX}_main"
-              UPSTREAM_TAG="${UPSTREAM}_main"
-            fi
+          if [ -z "$TRACKED_COMMIT" ]; then
+            echo "::error::Missing commit tracking file: $COMMIT_FILE"
+            echo "::error::All upstreams must have pinned commit hashes in tracking files"
+            exit 1
+          fi
+
+          echo "Using pinned commit for ${UPSTREAM}: ${TRACKED_COMMIT}"
+
+          # Try to find a tag that points to this commit
+          TAG=$(curl -s "https://api.github.com/repos/${OWNER}/${REPO}/git/refs/tags" | \
+            jq -r --arg commit "$TRACKED_COMMIT" '.[] | select(.object.sha == $commit or .object.object.sha == $commit) | .ref' | \
+            sed 's|refs/tags/||' | head -n1)
+
+          if [ -n "$TAG" ] && [ "$TAG" != "null" ]; then
+            UPSTREAM_VERSION="$TAG"
+            UPSTREAM_TAG="${UPSTREAM}_$TAG"
+          else
+            # No tag found, use commit hash as version
+            UPSTREAM_VERSION="${TRACKED_COMMIT}"
+            UPSTREAM_TAG="${UPSTREAM}_${TRACKED_COMMIT:0:8}"
           fi
 
           echo "version=$XFANTH_TAG" >> $GITHUB_OUTPUT
@@ -261,6 +248,7 @@ jobs:
           echo "xfanth_tag=$XFANTH_TAG" >> $GITHUB_OUTPUT
           echo "upstream_tag=$UPSTREAM_TAG" >> $GITHUB_OUTPUT
           echo "upstream_version=$UPSTREAM_VERSION" >> $GITHUB_OUTPUT
+          echo "upstream_commit=$TRACKED_COMMIT" >> $GITHUB_OUTPUT
 
       - name: Setup Blacksmith Docker Builder
         uses: useblacksmith/setup-docker-builder@v1
@@ -292,6 +280,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             UPSTREAM_VERSION=${{ steps.determine-version.outputs.upstream_version }}
+            UPSTREAM_COMMIT=${{ steps.determine-version.outputs.upstream_commit }}
             GIT_COMMIT=${{ github.sha }}
             BUILD_DATE=${{ github.event.head_commit.timestamp }}
             IMAGE_VERSION=${{ steps.determine-version.outputs.xfanth_tag }}
