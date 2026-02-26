@@ -7,17 +7,18 @@ This document provides guidelines for AI agents working on this repository.
 **IMPORTANT**: When making ANY code changes, ALWAYS follow this workflow:
 
 1. **Use worktrees** - Create a git worktree for isolation: `git worktree add ../polyclaw-worktrees/branch-name -b branch-name`
-2. **git pull** - Get latest changes from remote
-3. **Make changes** - Edit files as needed
-4. **Build locally** - Run `make build UPSTREAM=<upstream>` to build the Docker image locally
-5. **Test locally** - Run `make smoke-test UPSTREAM=<upstream>` to verify changes work
-6. **git add** - Stage the changes
-7. **git commit** - Commit with descriptive message
-8. **git push** - Push to remote
-9. **create PR** - Create a pull request using `gh pr create`
-10. **Monitor PR** - Watch the PR status and ensure all CI checks pass
-11. **Merge PR** - After CI succeeds and approval, merge the PR
-12. **Verify post-merge** - Ensure post-merge actions (builds, deployments) succeed
+2. **Merge origin/main** - Get latest changes: `git fetch origin main && git merge origin/main --no-edit`
+3. **Resolve conflicts** - Carefully merge conflicts, don't blindly discard their changes or your changes
+4. **Make changes** - Edit files as needed
+5. **Build locally** - Run `make build UPSTREAM=<upstream>` to build the Docker image locally
+6. **Test locally** - Run `make smoke-test UPSTREAM=<upstream>` to verify changes work
+7. **git add** - Stage the changes
+8. **git commit** - Commit with descriptive message
+9. **git push** - Push to remote
+10. **create PR** - Create a pull request using `gh pr create`
+11. **Monitor PR** - Watch the PR status and ensure all CI checks pass
+12. **Merge PR** - After CI succeeds and approval, merge the PR
+13. **Verify post-merge** - Ensure post-merge actions (builds, deployments) succeed
 
 This workflow is NON-NEGOTIABLE for all code changes.
 

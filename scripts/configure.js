@@ -47,6 +47,14 @@ const PROVIDER_MODELS = {
     copilot: [{ id: 'gpt-4o', name: 'gpt-4o' }],
 };
 
+function toTomlKey(key) {
+    if (/^[A-Za-z_][A-Za-z0-9_-]*$/.test(key)) {
+        return key;
+    }
+    const escaped = key.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+    return `"${escaped}"`;
+}
+
 function toTomlValue(value) {
     if (value === null || value === undefined) {
         return '';
@@ -86,7 +94,7 @@ function writeTomlSection(obj, prefix, output) {
     for (const [key, value] of simpleValues) {
         const tomlValue = toTomlValue(value);
         if (tomlValue !== '') {
-            output.push(`${key} = ${tomlValue}`);
+            output.push(`${toTomlKey(key)} = ${tomlValue}`);
         }
     }
 
@@ -95,7 +103,7 @@ function writeTomlSection(obj, prefix, output) {
     }
 
     for (const [key, value] of nestedObjects) {
-        const nestedPrefix = prefix ? `${prefix}.${key}` : key;
+        const nestedPrefix = prefix ? `${prefix}.${toTomlKey(key)}` : toTomlKey(key);
         writeTomlSection(value, nestedPrefix, output);
     }
 }
@@ -122,7 +130,7 @@ function jsonToToml(config, headerComment = 'Generated Configuration') {
     for (const [key, value] of topLevelValues) {
         const tomlValue = toTomlValue(value);
         if (tomlValue !== '') {
-            output.push(`${key} = ${tomlValue}`);
+            output.push(`${toTomlKey(key)} = ${tomlValue}`);
         }
     }
 
