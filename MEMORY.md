@@ -484,3 +484,53 @@ stderr_logfile_maxbytes=0
 - By running supervisord as root, it can open `/dev/stdout` successfully
 - The `user=` directive then drops privileges for child processes
 - Other upstreams (openclaw, picoclaw, ironclaw) use the traditional `su` approach
+
+## TOML Key Quoting
+
+When generating TOML config files, keys containing special characters (like `/`) must be quoted.
+
+**Problem:** Keys like `zai-coding-plan/glm-5` fail with:
+```
+TOML parse error at line 83, column 16
+   |
+83 | zai-coding-plan/glm-5 = ["kimi-code/kimi-k2.5", "gemini/gemini-3-pro"]
+   |                ^
+   invalid unquoted key, expected letters, numbers, `-`, `_`
+```
+
+**Solution:** The `toTomlKey()` function in `scripts/configure.js` quotes keys that don't match the TOML unquoted key pattern `^[A-Za-z_][A-Za-z0-9_-]*$`:
+```javascript
+function toTomlKey(key) {
+    if (/^[A-Za-z_][A-Za-z0-9_-]*$/.test(key)) {
+        return key;
+    }
+    const escaped = key.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+    return `"${escaped}"`;
+}
+```
+
+**Valid TOML key output:**
+```toml
+"zai-coding-plan/glm-5" = ["kimi-code/kimi-k2.5", "gemini/gemini-3-pro"]
+```
+
+## ZeroClaw Default Model and Fallback Providers
+
+ZeroClaw is configured with the following model defaults (in `scripts/configure-zeroclaw.js`):
+
+**Primary model:**
+- `zai-coding-plan/glm-5` (z.ai glm coding plan)
+
+**Fallback providers:**
+- `kimi-code` - Kimi Code provider
+- `gemini` - Google Gemini via AI Studio
+
+**Model fallback chain:**
+```toml
+[model_fallbacks]
+"zai-coding-plan/glm-5" = ["kimi-code/kimi-k2.5", "gemini/gemini-3-pro"]
+```
+
+**Agent settings:**
+- `max_tool_iterations: 1000` - High iteration limit for complex tasks
+- `max_history_messages: 500` - Large message history for context
