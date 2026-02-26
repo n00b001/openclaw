@@ -218,13 +218,13 @@ Terminal multiplexer for interactive sessions:
 docker exec -it <container> screen -S mysession
 ```
 
-### systemctl and dbus
-Service management tools are available:
-```bash
-docker exec -it <container> systemctl status
-```
+### supervisord
+The container uses supervisord for service management (not systemd). systemctl will NOT work because the container does not run systemd as PID 1.
 
-Note: While systemd tools are installed, the container uses supervisord for service management. systemctl can be used for manual service inspection.
+To check service status:
+```bash
+docker exec -it <container> supervisorctl status
+```
 
 ### zeroclaw channel start
 To start communication channels (WhatsApp, Telegram, Discord, Slack):
