@@ -131,7 +131,6 @@ if [ "$(id -u)" = "0" ]; then
         chown -R "$UPSTREAM:$UPSTREAM" "${OPENCLAW_WORKSPACE_DIR:-/data/workspace}" 2>/dev/null || true
     fi
     chown -R "$UPSTREAM:$UPSTREAM" "/var/log/$UPSTREAM" 2>/dev/null || true
-    chown -R "$UPSTREAM:$UPSTREAM" /var/log/supervisor 2>/dev/null || true
     chown -R "$UPSTREAM:$UPSTREAM" /var/lib/nginx 2>/dev/null || true
 
     # Ensure identity directory has correct permissions (must be writable)
@@ -479,8 +478,6 @@ fi
 # =============================================================================
 log_info "Creating supervisord configuration..."
 
-mkdir -p /var/log/supervisor
-
 # Determine gateway command based on upstream type
 # Each upstream has different CLI for starting the gateway:
 # - OpenClaw: openclaw gateway --port X --bind Y
@@ -509,8 +506,7 @@ esac
 cat > "$STATE_DIR/supervisord.conf" << EOF
 [supervisord]
 nodaemon=true
-user=$UPSTREAM
-logfile=/var/log/supervisor/supervisord.log
+logfile=/dev/null
 pidfile=/tmp/supervisord.pid
 
 [unix_http_server]
@@ -525,16 +521,18 @@ command=nginx -g "daemon off;"
 autostart=true
 autorestart=true
 priority=10
-stdout_logfile=/var/log/supervisor/nginx.log
-stderr_logfile=/var/log/supervisor/nginx-error.log
+user=$UPSTREAM
+stdout_logfile=NONE
+stderr_logfile=NONE
 
 [program:$UPSTREAM]
 command=$GATEWAY_CMD
 autostart=true
 autorestart=true
 priority=20
-stdout_logfile=/var/log/supervisor/$UPSTREAM.log
-stderr_logfile=/var/log/supervisor/$UPSTREAM-error.log
+user=$UPSTREAM
+stdout_logfile=NONE
+stderr_logfile=NONE
 environment=HOME="${SUPERVISOR_HOME}",OPENCLAW_STATE_DIR="${STATE_DIR}",OPENCLAW_WORKSPACE_DIR="${WORKSPACE_DIR}",OPENCLAW_GATEWAY_TOKEN="${OPENCLAW_GATEWAY_TOKEN}",OPENCLAW_INTERNAL_GATEWAY_PORT="${INTERNAL_GATEWAY_PORT}",NODE_ENV="production"
 EOF
 

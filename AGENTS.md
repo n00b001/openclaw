@@ -9,15 +9,19 @@ This document provides guidelines for AI agents working on this repository.
 1. **Use worktrees** - Create a git worktree for isolation: `git worktree add ../polyclaw-worktrees/branch-name -b branch-name`
 2. **git pull** - Get latest changes from remote
 3. **Make changes** - Edit files as needed
-4. **git add** - Stage the changes
-5. **git commit** - Commit with descriptive message
-6. **git push** - Push to remote
-7. **create PR** - Create a pull request using `gh pr create`
-8. **Monitor PR** - Watch the PR status and ensure all CI checks pass
-9. **Merge PR** - After CI succeeds and approval, merge the PR
-10. **Verify post-merge** - Ensure post-merge actions (builds, deployments) succeed
+4. **Build locally** - Run `make build UPSTREAM=<upstream>` to build the Docker image locally
+5. **Test locally** - Run `make smoke-test UPSTREAM=<upstream>` to verify changes work
+6. **git add** - Stage the changes
+7. **git commit** - Commit with descriptive message
+8. **git push** - Push to remote
+9. **create PR** - Create a pull request using `gh pr create`
+10. **Monitor PR** - Watch the PR status and ensure all CI checks pass
+11. **Merge PR** - After CI succeeds and approval, merge the PR
+12. **Verify post-merge** - Ensure post-merge actions (builds, deployments) succeed
 
 This workflow is NON-NEGOTIABLE for all code changes.
+
+**CRITICAL: Always build and test locally BEFORE pushing.** GitHub CI is slow and expensive. Local testing catches issues early and saves CI resources.
 
 **IMPORTANT**:
 - Always use worktrees for isolation
@@ -151,7 +155,8 @@ git branch -d feature/description-of-change
 - Configuration is managed through `.env` files
 - Use `make help` to see available commands
 - The Makefile contains many common operations
-- **Docker image builds are done by GitHub Actions** - do not build locally
+- **Always build and test locally first** using `make build UPSTREAM=<upstream>` and `make smoke-test UPSTREAM=<upstream>`
+- GitHub CI validates changes, but local testing is faster and cheaper
 
 ## Hadolint/Dockerfile
 
@@ -258,5 +263,6 @@ The daemon requires the `-p` flag to specify the port (it doesn't read `gateway.
 When modifying ZeroClaw config, ensure:
 1. `shell_env_passthrough` uses valid env var names (`[A-Za-z_][A-Za-z0-9_]*`)
 2. Test locally with `pre-commit run --all-files`
-3. Monitor smoke tests for config validation errors
-4. **Always test Docker builds locally before pushing** to avoid wasting CI time
+3. Build locally with `make build UPSTREAM=zeroclaw`
+4. Test locally with `make smoke-test UPSTREAM=zeroclaw`
+5. Monitor smoke tests for config validation errors
