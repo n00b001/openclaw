@@ -495,7 +495,7 @@ case "$UPSTREAM" in
         GATEWAY_CMD="/usr/local/bin/$CLI_NAME gateway --port ${INTERNAL_GATEWAY_PORT}"
         ;;
     zeroclaw)
-        GATEWAY_CMD="/usr/local/bin/$CLI_NAME daemon"
+        GATEWAY_CMD="/usr/local/bin/$CLI_NAME daemon -p ${INTERNAL_GATEWAY_PORT}"
         ;;
     ironclaw)
         GATEWAY_CMD="/usr/local/bin/$CLI_NAME"
