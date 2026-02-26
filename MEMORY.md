@@ -534,3 +534,32 @@ ZeroClaw is configured with the following model defaults (in `scripts/configure-
 **Agent settings:**
 - `max_tool_iterations: 1000` - High iteration limit for complex tasks
 - `max_history_messages: 500` - Large message history for context
+
+## ZeroClaw UI Pairing Check Bug
+
+**Problem:** Even with `require_pairing: false` in config, the ZeroClaw UI still shows the pairing screen.
+
+**Root Cause:** The nginx config didn't disable HTTP Basic Auth for the `/health` endpoint. The UI calls `/health` to check if pairing is required:
+```javascript
+// web/src/hooks/useAuth.tsx
+getPublicHealth()
+  .then((health) => {
+    if (!health.require_pairing) {
+      setAuthenticated(true);  // Should skip pairing screen
+    }
+  })
+```
+
+If `/health` returns 401 (due to HTTP Basic Auth), the UI falls through to showing the pairing screen.
+
+**Fix:** Added `auth_basic off;` to the following nginx locations in `scripts/entrypoint.sh`:
+- `/healthz` - Health check endpoint
+- `/health` - ZeroClaw health endpoint (returns `require_pairing` status)
+- `/pair` - Pairing endpoint (used by UI to submit pairing codes)
+- `/hooks` - Webhook endpoint (token-based auth)
+
+**Related endpoints that must NOT have auth_basic:**
+- `/health` - UI checks `require_pairing` status here
+- `/pair` - UI submits pairing codes here
+- `/healthz` - Docker health check
+- `/hooks` - External webhooks (uses token auth, not HTTP Basic)

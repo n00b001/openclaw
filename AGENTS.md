@@ -267,3 +267,14 @@ When modifying ZeroClaw config, ensure:
 3. Build locally with `make build UPSTREAM=zeroclaw`
 4. Test locally with `make smoke-test UPSTREAM=zeroclaw`
 5. Monitor smoke tests for config validation errors
+
+### ZeroClaw Nginx Auth Configuration
+
+The ZeroClaw UI checks `/health` to determine if pairing is required. These endpoints must have `auth_basic off;` in nginx:
+
+- `/health` - UI checks `require_pairing` status
+- `/healthz` - Docker health check
+- `/pair` - UI submits pairing codes
+- `/hooks` - External webhooks (uses token auth)
+
+If the UI shows the pairing screen even when `require_pairing: false`, check that these locations have `auth_basic off;` in `scripts/entrypoint.sh`.
