@@ -327,25 +327,25 @@ if echo "$SUPERVISOR_STATUS" | grep -E "^${UPSTREAM}\s+RUNNING" > /dev/null 2>&1
     log_success "${UPSTREAM} gateway process is RUNNING (via supervisorctl)"
     TESTS_PASSED=$((TESTS_PASSED + 1))
 else
-    # supervisorctl might fail due to socket permissions, check logs as fallback
-    SUPERVISOR_LOGS=$(docker compose -f "$COMPOSE_FILE" exec -T "$SERVICE_NAME" cat "/var/log/supervisor/supervisord.log" 2>/dev/null | tail -30 || echo "")
+    # supervisorctl might fail due to socket permissions, check docker logs as fallback
+    CONTAINER_ID=$(docker compose -f "$COMPOSE_FILE" ps -q "$SERVICE_NAME" 2>/dev/null || echo "")
 
-    if echo "$SUPERVISOR_LOGS" | grep -q "${UPSTREAM}.*entered RUNNING state"; then
-        log_success "${UPSTREAM} gateway process is RUNNING (verified via logs)"
+    if [ -n "$CONTAINER_ID" ]; then
+        CONTAINER_LOGS=$(docker logs "$CONTAINER_ID" 2>&1 | tail -50 || echo "")
+    else
+        CONTAINER_LOGS=""
+    fi
+
+    if echo "$CONTAINER_LOGS" | grep -q "entered RUNNING state"; then
+        log_success "${UPSTREAM} gateway process is RUNNING (verified via docker logs)"
         TESTS_PASSED=$((TESTS_PASSED + 1))
     else
         log_error "${UPSTREAM} gateway process is NOT running!"
         log_info "Supervisor status:"
         echo "$SUPERVISOR_STATUS"
 
-        log_info "Supervisor logs:"
-        echo "$SUPERVISOR_LOGS"
-
-        log_info "Gateway error logs:"
-        docker compose -f "$COMPOSE_FILE" exec -T "$SERVICE_NAME" cat "/var/log/supervisor/${UPSTREAM}-error.log" 2>/dev/null | tail -30 || true
-
-        log_info "Gateway stdout logs:"
-        docker compose -f "$COMPOSE_FILE" exec -T "$SERVICE_NAME" cat "/var/log/supervisor/${UPSTREAM}.log" 2>/dev/null | tail -30 || true
+        log_info "Container logs (last 50 lines):"
+        echo "$CONTAINER_LOGS"
 
         # For compiled binaries, run the gateway manually to see the actual error
         if [ "$IS_NODEJS_UPSTREAM" = false ]; then
@@ -418,10 +418,11 @@ if [ "$GATEWAY_ACTUALLY_RUNNING" = false ]; then
     docker compose -f "$COMPOSE_FILE" exec -T "$SERVICE_NAME" supervisorctl status 2>/dev/null || true
     log_info "Checking ${UPSTREAM} process..."
     docker compose -f "$COMPOSE_FILE" exec -T "$SERVICE_NAME" ps aux | grep -E "${UPSTREAM}|gateway" | head -5 || true
-    log_info "Recent ${UPSTREAM} logs:"
-    docker compose -f "$COMPOSE_FILE" exec -T "$SERVICE_NAME" tail -50 /var/log/supervisor/${UPSTREAM}.log 2>/dev/null || true
-    log_info "Recent ${UPSTREAM} error logs:"
-    docker compose -f "$COMPOSE_FILE" exec -T "$SERVICE_NAME" tail -50 /var/log/supervisor/${UPSTREAM}-error.log 2>/dev/null || true
+    log_info "Recent container logs (docker logs):"
+    CONTAINER_ID=$(docker compose -f "$COMPOSE_FILE" ps -q "$SERVICE_NAME" 2>/dev/null || echo "")
+    if [ -n "$CONTAINER_ID" ]; then
+        docker logs "$CONTAINER_ID" 2>&1 | tail -50 || true
+    fi
     TESTS_FAILED=$((TESTS_FAILED + 1))
     exit 1
 else
