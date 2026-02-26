@@ -310,15 +310,17 @@ Reference: https://github.com/zeroclaw-labs/zeroclaw/blob/main/dev/config.templa
 
 **Do NOT** use nested `[agents.defaults]` sections - ZeroClaw expects flat top-level fields.
 
-## Screen and Systemd Support
+## Screen and Supervisord Support
 
 The zeroclaw Dockerfile includes:
 - `screen` - Terminal multiplexer for interactive sessions
-- `systemd` and `dbus` - For service management
+- `supervisord` - For service management (NOT systemd)
 
 These can be used for:
 - Interactive sessions: `screen -S mysession`
-- Manual service management (if needed): `systemctl status`
+- Service management: `supervisorctl status`
+
+**Note**: systemctl will NOT work in the container because systemd is not running as PID 1. Docker containers use supervisord for process management.
 
 ## Zeroclaw Channel Start
 
