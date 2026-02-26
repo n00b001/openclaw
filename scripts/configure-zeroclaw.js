@@ -74,16 +74,16 @@ function buildConfig(STATE_DIR, WORKSPACE_DIR, parseList, PROVIDER_URLS, PROVIDE
         },
 
         autonomy: {
-            level: 'supervised',
+            level: 'full',
             workspace_only: true,
             allowed_commands: ['git', 'npm', 'cargo', 'ls', 'cat', 'grep', 'find', 'echo', 'pwd', 'wc', 'head', 'tail', 'date'],
             forbidden_paths: ['/etc', '/root', '/home', '/usr', '/bin', '/sbin', '/lib', '/opt', '/boot', '/dev', '/proc', '/sys', '/var', '/tmp', '~/.ssh', '~/.gnupg', '~/.aws', '~/.config'],
             max_actions_per_hour: 20,
             max_cost_per_day_cents: 500,
-            require_approval_for_medium_risk: true,
-            block_high_risk_commands: true,
-            shell_env_passthrough: [],
-            auto_approve: ['file_read', 'memory_recall'],
+            require_approval_for_medium_risk: false,
+            block_high_risk_commands: false,
+            shell_env_passthrough: ['*'],
+            auto_approve: ['*'],
             always_ask: [],
             allowed_roots: [],
             non_cli_excluded_tools: [],
@@ -154,15 +154,15 @@ function buildConfig(STATE_DIR, WORKSPACE_DIR, parseList, PROVIDER_URLS, PROVIDE
         },
 
         agent: {
-            compact_context: false,
+            compact_context: true,
             max_tool_iterations: 10,
             max_history_messages: 50,
-            parallel_tools: false,
+            parallel_tools: true,
             tool_dispatcher: 'auto',
         },
 
         skills: {
-            open_skills_enabled: false,
+            open_skills_enabled: true,
             prompt_injection_mode: 'full',
         },
 
@@ -172,7 +172,7 @@ function buildConfig(STATE_DIR, WORKSPACE_DIR, parseList, PROVIDER_URLS, PROVIDE
         },
 
         heartbeat: {
-            enabled: false,
+            enabled: true,
             interval_minutes: 30,
         },
 
@@ -229,19 +229,19 @@ function buildConfig(STATE_DIR, WORKSPACE_DIR, parseList, PROVIDER_URLS, PROVIDE
         gateway: {
             port: gatewayPort,
             host: gatewayHost,
-            require_pairing: true,
+            require_pairing: false,
             allow_public_bind: false,
             paired_tokens: [],
             pair_rate_limit_per_minute: 10,
             webhook_rate_limit_per_minute: 60,
-            trust_forwarded_headers: false,
+            trust_forwarded_headers: true,
             rate_limit_max_keys: 10000,
             idempotency_ttl_secs: 300,
             idempotency_max_keys: 10000,
         },
 
         composio: {
-            enabled: false,
+            enabled: true,
             entity_id: 'default',
         },
 
@@ -250,11 +250,11 @@ function buildConfig(STATE_DIR, WORKSPACE_DIR, parseList, PROVIDER_URLS, PROVIDE
         },
 
         browser: {
-            enabled: false,
+            enabled: true,
             allowed_domains: [],
             backend: 'agent_browser',
             native_headless: true,
-            native_webdriver_url: 'http://127.0.0.1:9515',
+            native_webdriver_url: 'http://openclaw-browser:9222',
             computer_use: {
                 endpoint: 'http://127.0.0.1:8787/v1/actions',
                 timeout_ms: 15000,
@@ -264,8 +264,8 @@ function buildConfig(STATE_DIR, WORKSPACE_DIR, parseList, PROVIDER_URLS, PROVIDE
         },
 
         http_request: {
-            enabled: false,
-            allowed_domains: [],
+            enabled: true,
+            allowed_domains: ['*'],
             max_response_size: 1000000,
             timeout_secs: 30,
         },
@@ -273,11 +273,11 @@ function buildConfig(STATE_DIR, WORKSPACE_DIR, parseList, PROVIDER_URLS, PROVIDE
         multimodal: {
             max_images: 4,
             max_image_size_mb: 5,
-            allow_remote_fetch: false,
+            allow_remote_fetch: true,
         },
 
         web_fetch: {
-            enabled: false,
+            enabled: true,
             allowed_domains: ['*'],
             blocked_domains: [],
             max_response_size: 500000,
@@ -285,7 +285,7 @@ function buildConfig(STATE_DIR, WORKSPACE_DIR, parseList, PROVIDER_URLS, PROVIDE
         },
 
         web_search: {
-            enabled: false,
+            enabled: true,
             provider: 'duckduckgo',
             max_results: 5,
             timeout_secs: 15,
