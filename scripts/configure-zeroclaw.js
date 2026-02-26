@@ -8,7 +8,7 @@
 // =============================================================================
 
 function buildConfig(STATE_DIR, WORKSPACE_DIR, parseList, PROVIDER_URLS, PROVIDER_MODELS) {
-    const primaryModel = process.env.OPENCLAW_PRIMARY_MODEL || 'zai-coding-plan/glm-5';
+    const primaryModel = process.env.OPENCLAW_PRIMARY_MODEL || 'zai/glm-5';
     const parts = primaryModel.split('/');
     const provider = parts.length > 1 ? parts[0] : 'zai';
     const model = parts.length > 1 ? parts.slice(1).join('/') : primaryModel;
@@ -145,7 +145,7 @@ function buildConfig(STATE_DIR, WORKSPACE_DIR, parseList, PROVIDER_URLS, PROVIDE
             scheduler_poll_secs: 15,
             scheduler_retries: 2,
             model_fallbacks: {
-                'zai-coding-plan/glm-5': ['kimi-code/kimi-k2.5', 'gemini/gemini-3-pro'],
+                'zai/glm-5': ['kimi-code/kimi-for-coding', 'gemini/gemini-3.1-pro-preview-customtools'],
             },
         },
 
