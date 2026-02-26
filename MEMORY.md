@@ -111,7 +111,68 @@ When adding a new upstream:
 - Add build step for the new language/toolchain
 - Update binary handling and CLI wrappers
 - Add to CI matrix in `.github/workflows/docker-build.yml` and `manual-release.yml`
+- **Create commit tracking file `.<upstream>-main-commit`** (see below)
 - Skip smoke tests if architecture differs (e.g., Rust binary has different API)
+
+## Upstream Commit Tracking (CRITICAL)
+
+**NEVER build from latest main branch.** All builds must use pinned commit hashes for reproducibility.
+
+### Commit Tracking Files
+
+Each upstream has two tracking files:
+- `.<upstream>-main-commit` - Pinned commit for main builds
+- `.<upstream>-tagged-commit` - Optional, for tagged releases
+
+Example files:
+```
+.openclaw-main-commit      # Contains commit hash for openclaw
+.openclaw-tagged-commit    # Contains commit hash for latest release
+.zeroclaw-main-commit      # Contains commit hash for zeroclaw
+.zeroclaw-tagged-commit    # Contains commit hash for latest release
+.picoclaw-main-commit      # Contains commit hash for picoclaw
+.ironclaw-main-commit      # Contains commit hash for ironclaw
+```
+
+### How It Works
+
+1. **Workflow reads commit from tracking file** - The `determine-version` step reads `.<upstream>-main-commit`
+2. **Passes commit to Dockerfile** - Build arg `UPSTREAM_COMMIT` is set
+3. **Dockerfile checks out at commit** - Uses `git fetch && git checkout` to pin the exact commit
+4. **Build fails if file missing** - No fallback to "latest main"
+
+### Updating Upstream Version
+
+To update an upstream to a new version:
+
+1. **Find the commit hash** for the desired version:
+   ```bash
+   # For a specific tag
+   curl -s "https://api.github.com/repos/zeroclaw-labs/zeroclaw/git/ref/tags/v0.1.7" | jq -r '.object.sha'
+
+   # For latest main (careful!)
+   curl -s "https://api.github.com/repos/zeroclaw-labs/zeroclaw/commits/main" | jq -r '.sha'
+   ```
+
+2. **Update the tracking file**:
+   ```bash
+   echo "b17a636b39267038ff8475152472ef669ae828ab" > .zeroclaw-main-commit
+   ```
+
+3. **Test locally**:
+   ```bash
+   docker build --build-arg UPSTREAM_COMMIT=$(cat .zeroclaw-main-commit) -f Dockerfile-zeroclaw -t zeroclaw:test .
+   ```
+
+4. **Create PR** with the updated tracking file
+
+### Daily Update Process
+
+A daily process should:
+1. Check upstream repos for new releases
+2. Update the `.<upstream>-tagged-commit` file
+3. Create a PR for the update
+4. CI validates the build before merge
 
 ## Trivy/Code Scanning Matrix Changes
 

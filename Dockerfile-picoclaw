@@ -22,6 +22,7 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # Build arguments for upstream selection
 ARG UPSTREAM=picoclaw
 ARG UPSTREAM_VERSION=main
+ARG UPSTREAM_COMMIT
 
 # Install build dependencies with retry logic for transient network issues
 RUN for i in 1 2 3; do \
@@ -50,12 +51,20 @@ RUN curl -fsSL "https://go.dev/dl/go1.25.7.linux-amd64.tar.gz" -o go.tar.gz \
 WORKDIR /build
 
 # Clone PicoClaw
+# UPSTREAM_COMMIT takes precedence over UPSTREAM_VERSION for reproducible builds
 RUN set -eux && \
     GITHUB_OWNER="sipeed" && \
     GITHUB_REPO="picoclaw" && \
-    if [ "${UPSTREAM_VERSION}" = "pc_main" ]; then \
+    if [ -n "${UPSTREAM_COMMIT}" ]; then \
+        echo "Cloning at pinned commit: ${UPSTREAM_COMMIT}"; \
+        git clone --depth 1 "https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}.git" . && \
+        git fetch --depth 1 origin "${UPSTREAM_COMMIT}" && \
+        git checkout "${UPSTREAM_COMMIT}"; \
+    elif [ "${UPSTREAM_VERSION}" = "pc_main" ]; then \
+        echo "WARNING: Building from latest main - not reproducible!"; \
         git clone --depth 1 --branch main "https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}.git" .; \
     else \
+        echo "Cloning at tag: ${UPSTREAM_VERSION}"; \
         git clone --depth 1 --branch "${UPSTREAM_VERSION}" "https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}.git" .; \
     fi
 

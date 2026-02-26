@@ -110,6 +110,20 @@ jobs:
             type=raw,value=${{ needs.create-release.outputs.new_version }}
             type=raw,value=latest
 
+      - name: Determine upstream commit
+        id: determine-commit
+        run: |
+          UPSTREAM="${{ matrix.upstream }}"
+          COMMIT_FILE=".${UPSTREAM}-main-commit"
+          TRACKED_COMMIT=$(cat "$COMMIT_FILE" 2>/dev/null || echo "")
+
+          if [ -z "$TRACKED_COMMIT" ]; then
+            echo "::error::Missing commit tracking file: $COMMIT_FILE"
+            exit 1
+          fi
+
+          echo "upstream_commit=$TRACKED_COMMIT" >> $GITHUB_OUTPUT
+
       - name: Build and push Docker image
         uses: useblacksmith/build-push-action@v2
         with:
@@ -121,6 +135,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             UPSTREAM_VERSION=${{ needs.create-release.outputs.new_version }}
+            UPSTREAM_COMMIT=${{ steps.determine-commit.outputs.upstream_commit }}
             GIT_COMMIT=${{ github.sha }}
             BUILD_DATE=${{ github.event.head_commit.timestamp }}
             IMAGE_VERSION=${{ needs.create-release.outputs.new_version }}
