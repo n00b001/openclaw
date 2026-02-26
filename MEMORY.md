@@ -441,35 +441,44 @@ This is why channels weren't starting automatically with `zeroclaw gateway` - ch
 
 The container uses supervisord to manage nginx and the upstream gateway. For `docker logs` to capture output:
 
+**ZeroClaw (special handling):**
+- Runs supervisord as root (not switched via `su`)
+- Uses `user=zeroclaw` in program sections for privilege dropping
+- This allows `/dev/stdout` to be opened successfully for log redirection
+
 **Configuration in `scripts/entrypoint.sh`:**
 ```ini
 [supervisord]
 nodaemon=true
-logfile=/dev/null        # Don't log supervisord itself to file
+logfile=/dev/null
 pidfile=/tmp/supervisord.pid
 
 [program:nginx]
 command=nginx -g "daemon off;"
-user=$UPSTREAM
-stdout_logfile=NONE      # Don't capture stdout - let it go to container
-stderr_logfile=NONE      # Don't capture stderr - let it go to container
+user=zeroclaw
+stdout_logfile=/dev/stdout
+stdout_logfile_maxbytes=0
+stderr_logfile=/dev/stderr
+stderr_logfile_maxbytes=0
 
-[program:$UPSTREAM]
-command=$GATEWAY_CMD
-user=$UPSTREAM
-stdout_logfile=NONE
-stderr_logfile=NONE
+[program:zeroclaw]
+command=/usr/local/bin/zeroclaw daemon -p 18789
+user=zeroclaw
+stdout_logfile=/dev/stdout
+stdout_logfile_maxbytes=0
+stderr_logfile=/dev/stderr
+stderr_logfile_maxbytes=0
 ```
 
 **Key points:**
-- `stdout_logfile=NONE` and `stderr_logfile=NONE` disable supervisord's log capture
-- Child process output goes directly to supervisord's stdout/stderr, which Docker captures
-- `user=$UPSTREAM` in program configs drops privileges for each service
-- Do NOT use `user=` in `[supervisord]` section - supervisord runs as the entrypoint user (after `su`)
-- Removed `/var/log/supervisor` directory since logs go to Docker now
+- `/dev/stdout` redirects stdout to supervisord's stdout (which Docker captures)
+- `/dev/stderr` redirects stderr to supervisord's stderr (which Docker captures)
+- `*_logfile_maxbytes=0` disables log rotation (not needed for Docker)
+- `user=zeroclaw` in program configs drops privileges for each service
+- Supervisord runs as root and can open `/dev/stdout` before dropping privileges
 
-**Why this works:**
-- The entrypoint runs as root, then `exec su` to switch to `$UPSTREAM` user
-- Supervisord runs as the switched user (not root)
-- `NONE` tells supervisord to not intercept stdout/stderr, letting them pass through
-- Docker captures the container's stdout/stderr automatically
+**Why ZeroClaw runs supervisord as root:**
+- When using `su` to switch users, `/dev/stdout` becomes inaccessible (EACCES)
+- By running supervisord as root, it can open `/dev/stdout` successfully
+- The `user=` directive then drops privileges for child processes
+- Other upstreams (openclaw, picoclaw, ironclaw) use the traditional `su` approach
