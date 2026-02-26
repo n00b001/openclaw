@@ -32,6 +32,20 @@ This workflow is NON-NEGOTIABLE for all code changes.
 - Always merge after approval
 - Always verify post-merge actions succeed
 
+### Handling Merge Conflicts
+
+Before creating a PR, if origin/main has new commits:
+
+1. **Merge main into your branch**: `git fetch origin && git merge origin/main`
+2. **Resolve conflicts carefully**:
+   - Don't blindly discard their changes (origin/main)
+   - Don't blindly discard your changes (your branch)
+   - Review both sides and combine intelligently
+3. **Test locally after merge**: Run `make smoke-test UPSTREAM=<upstream>` again
+4. **Push and continue**: The PR will update automatically
+- Always merge after approval
+- Always verify post-merge actions succeed
+
 ### PR Monitoring (CRITICAL)
 After creating a PR, you **MUST** monitor it until all checks pass:
 
@@ -243,11 +257,17 @@ docker logs <container> 2>&1 | grep -i "pair\|code\|token"
 
 ZeroClaw uses permissive defaults for full autonomy. Key settings in `scripts/configure-zeroclaw.js`:
 
+- **Default provider/model**: `zai/glm-5` (ZAI_API_KEY prioritized)
 - **Autonomy level**: `full` (not supervised)
+- **Allowed commands**: `['*']` (all commands allowed)
 - **Auto-approve**: All tool calls (`['*']`)
+- **Runtime kind**: `docker` (containerized execution)
 - **Shell env passthrough**: Common env vars (PATH, HOME, USER, etc.) - **must be specific names, not `*` wildcard**
 - **Enabled tools**: browser, http_request, web_fetch, web_search, composio
 - **Browser CDP**: `http://openclaw-browser:9222` (for docker-compose setup)
+- **Browser allowed domains**: `['*']` (all domains)
+- **Composio**: Requires `COMPOSIO_API_KEY` environment variable
+- **Command logger**: Enabled (for auditing)
 - **Gateway**: No pairing required, trust forwarded headers
 
 ### ZeroClaw Runtime Mode

@@ -236,6 +236,7 @@ ZAI_API_KEY
 OPENCODE_API_KEY
 COPILOT_GITHUB_TOKEN
 XIAOMI_API_KEY
+COMPOSIO_API_KEY
 ```
 
 When adding new env vars to `configure.js`, **always add them to the whitelist** in `entrypoint.sh`.
@@ -396,8 +397,14 @@ This command starts all enabled communication channels defined in the config.
 
 ZeroClaw uses permissive defaults for full autonomy mode. Key settings in `scripts/configure-zeroclaw.js`:
 
+### Provider Settings
+- `default_provider: 'zai'` - Z.AI as default provider (GLM models)
+- `default_model: 'glm-5'` - GLM-5 as default model
+- Provider keys are checked in order: ZAI_API_KEY first, then KIMI_API_KEY, etc.
+
 ### Autonomy Settings
 - `level: 'full'` - Full autonomy mode (not supervised)
+- `allowed_commands: ['*']` - All commands allowed (no restrictions)
 - `auto_approve: ['*']` - Auto-approve all tool calls
 - `require_approval_for_medium_risk: false` - No approval for medium-risk actions
 - `block_high_risk_commands: false` - Allow high-risk commands
@@ -405,14 +412,21 @@ ZeroClaw uses permissive defaults for full autonomy mode. Key settings in `scrip
 
 **Note**: `shell_env_passthrough` cannot use `*` wildcard - it must be specific env var names matching `[A-Za-z_][A-Za-z0-9_]*` pattern.
 
+### Runtime Settings
+- `runtime.kind: 'docker'` - Containerized execution (not native)
+
 ### Enabled Tools
 - `browser.enabled: true` - Browser automation enabled
+- `browser.allowed_domains: ['*']` - All domains allowed
 - `browser.native_webdriver_url: 'http://openclaw-browser:9222'` - CDP endpoint
 - `http_request.enabled: true` - HTTP requests enabled
 - `web_fetch.enabled: true` - Web fetching enabled
 - `web_search.enabled: true` - Web search enabled
-- `composio.enabled: true` - Composio integration enabled
+- `composio.enabled: true` - Composio integration enabled (requires `COMPOSIO_API_KEY`)
 - `skills.open_skills_enabled: true` - Open skills enabled
+
+### Hooks
+- `hooks.builtin.command_logger: true` - Command logging enabled for auditing
 
 ### Performance Settings
 - `agent.compact_context: true` - Compact context for better token usage
