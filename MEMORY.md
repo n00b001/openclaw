@@ -545,6 +545,15 @@ ZeroClaw is configured with the following model defaults (in `scripts/configure-
 "zai/glm-5" = ["kimi-code/kimi-for-coding", "gemini/gemini-3.1-pro-preview-customtools"]
 ```
 
+**Fallback provider API keys (environment variables):**
+ZeroClaw reads API keys from environment variables automatically based on provider name:
+- `kimi-code` → `KIMI_CODE_API_KEY` or `MOONSHOT_API_KEY`
+- `gemini` → `GEMINI_API_KEY` or `GOOGLE_API_KEY`
+
+The `reliability.api_keys` field is `Vec<String>` for round-robin keys of the **same provider** (to handle rate limits), NOT for fallback providers. Fallback providers use their own env vars.
+
+**Important:** The whitelist in `scripts/entrypoint.sh` must include all provider-specific env vars (e.g., `KIMI_CODE_API_KEY`, `GEMINI_API_KEY`).
+
 **Agent settings:**
 - `max_tool_iterations: 1000` - High iteration limit for complex tasks
 - `max_history_messages: 500` - Large message history for context
