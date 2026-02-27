@@ -133,10 +133,10 @@ function buildConfig(STATE_DIR, WORKSPACE_DIR, parseList, PROVIDER_URLS, PROVIDE
         },
 
         reliability: {
-            provider_retries: 2,
+            provider_retries: 15,
             provider_backoff_ms: 500,
             fallback_providers: ['kimi-code', 'gemini'],
-            api_keys: [],
+            api_keys: Object.values(providerKeys).filter(key => key),
             channel_initial_backoff_secs: 2,
             channel_max_backoff_secs: 60,
             scheduler_poll_secs: 15,
