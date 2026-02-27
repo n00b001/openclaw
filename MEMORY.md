@@ -393,6 +393,17 @@ zeroclaw channel start
 
 This command starts all enabled communication channels defined in the config.
 
+## ZeroClaw Channel Session Paths
+
+Channel session files (WhatsApp, Telegram, etc.) must use **absolute paths** under `/data/.zeroclaw/`:
+
+```toml
+[channels_config.whatsapp]
+session_path = "/data/.zeroclaw/state/whatsapp-web/session.db"  # NOT "~/.zeroclaw/..."
+```
+
+**Why**: The ZeroClaw CLI wrapper at `/usr/local/bin/zeroclaw` sets `HOME=/data` before executing the binary. Session paths with `~` would resolve incorrectly if the wrapper's HOME setting is not applied. Using absolute paths ensures consistency.
+
 ## ZeroClaw Default Configuration
 
 ZeroClaw uses permissive defaults for full autonomy mode. Key settings in `scripts/configure-zeroclaw.js`:

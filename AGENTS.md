@@ -283,10 +283,22 @@ The daemon requires the `-p` flag to specify the port (it doesn't read `gateway.
 
 When modifying ZeroClaw config, ensure:
 1. `shell_env_passthrough` uses valid env var names (`[A-Za-z_][A-Za-z0-9_]*`)
-2. Test locally with `pre-commit run --all-files`
-3. Build locally with `make build UPSTREAM=zeroclaw`
-4. Test locally with `make smoke-test UPSTREAM=zeroclaw`
-5. Monitor smoke tests for config validation errors
+2. **Channel paths use absolute `/data/.zeroclaw/` paths** (not `~/.zeroclaw/`) since the CLI wrapper sets `HOME=/data`
+3. Test locally with `pre-commit run --all-files`
+4. Build locally with `make build UPSTREAM=zeroclaw`
+5. Test locally with `make smoke-test UPSTREAM=zeroclaw`
+6. Monitor smoke tests for config validation errors
+
+### ZeroClaw Channel Session Paths
+
+Channel session files (WhatsApp, Telegram, etc.) must use absolute paths under `/data/.zeroclaw/`:
+
+```toml
+[channels_config.whatsapp]
+session_path = "/data/.zeroclaw/state/whatsapp-web/session.db"  # NOT "~/.zeroclaw/..."
+```
+
+**Why**: The ZeroClaw CLI wrapper at `/usr/local/bin/zeroclaw` sets `HOME=/data` before executing the binary. Session paths with `~` would resolve incorrectly if the wrapper's HOME setting is not applied. Using absolute paths ensures consistency.
 
 ### ZeroClaw Nginx Auth Configuration
 
