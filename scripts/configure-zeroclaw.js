@@ -75,7 +75,7 @@ function buildConfig(STATE_DIR, WORKSPACE_DIR, parseList, PROVIDER_URLS, PROVIDE
             workspace_only: true,
             allowed_commands: ['*'],
             forbidden_paths: ['/etc', '/root', '/home', '/usr', '/bin', '/sbin', '/lib', '/opt', '/boot', '/dev', '/proc', '/sys', '/var', '/tmp', '~/.ssh', '~/.gnupg', '~/.aws', '~/.config'],
-            max_actions_per_hour: 20,
+            max_actions_per_hour: 2000,
             max_cost_per_day_cents: 500,
             require_approval_for_medium_risk: false,
             block_high_risk_commands: false,
