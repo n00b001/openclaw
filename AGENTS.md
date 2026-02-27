@@ -308,3 +308,13 @@ ZeroClaw UI has a bug where it checks the `paired` field instead of `require_pai
 - After: `{"paired":true,"require_pairing":false,...}`
 
 This makes the UI skip the pairing screen when pairing is disabled. The workaround is only applied when `UPSTREAM=zeroclaw`.
+
+### ZeroClaw Fallback Provider API Keys
+
+ZeroClaw reads API keys from environment variables automatically based on provider name. The `reliability.api_keys` field is `Vec<String>` for round-robin keys of the **same provider** (to handle rate limits), NOT for fallback providers.
+
+**Fallback provider env vars:**
+- `kimi-code` → `KIMI_CODE_API_KEY` or `MOONSHOT_API_KEY`
+- `gemini` → `GEMINI_API_KEY` or `GOOGLE_API_KEY`
+
+**Important:** When adding new fallback providers, add their env vars to the whitelist in `scripts/entrypoint.sh` (the `--whitelist-environment` flag in the `su` command). Without this, the env vars are lost when switching users.
