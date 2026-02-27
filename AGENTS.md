@@ -206,6 +206,17 @@ When changing the security-scan matrix (e.g., adding a new upstream):
 
 When adding new environment variables to `scripts/configure.js`, you **must** also add them to the `--whitelist-environment` list in `scripts/entrypoint.sh` (around line 81). The entrypoint runs as root, then switches to the upstream user via `su` - only whitelisted env vars survive this switch. See MEMORY.md for the current whitelist.
 
+### Required Environment Variables
+
+Certain environment variables must be set for ZeroClaw's `doctor` command to pass:
+
+- **SHELL**: Must be set to `/bin/bash` (or user's shell). ZeroClaw doctor warns if `$SHELL not set`.
+
+When adding such variables, update **three places** in `scripts/entrypoint.sh`:
+1. Export the variable: `export SHELL="${SHELL:-/bin/bash}"`
+2. Add to supervisord environment: `environment=...,SHELL="/bin/bash",...`
+3. Add to `--whitelist-environment` for su command
+
 ## ZeroClaw HOME Directory
 
 ZeroClaw (Rust binary) uses `$HOME/.zeroclaw/` to find its configuration. This differs from Node.js upstreams that use `OPENCLAW_STATE_DIR`.
