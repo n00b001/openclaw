@@ -540,27 +540,28 @@ ZeroClaw is configured with the following model defaults (in `scripts/configure-
 - `kimi-code` - Kimi Code provider
 - `gemini` - Google Gemini via AI Studio
 
-**Provider-scoped model fallbacks (CRITICAL):**
+**Model fallbacks (v0.1.7 format):**
 
-ZeroClaw's `model_fallbacks` config uses **provider-scoped keys**, not model-scoped keys. When ZeroClaw falls back from the primary provider to a fallback provider, it looks up the provider name in `model_fallbacks` to find the correct model to use.
+ZeroClaw's `model_fallbacks` config uses **model names as keys** (not provider names). When a model fails on all providers, ZeroClaw tries each fallback model with each provider.
 
 ```toml
 [reliability.model_fallbacks]
-"kimi-code" = ["kimi-for-coding"]        # When falling back to kimi-code, use kimi-for-coding
-"gemini" = ["gemini-3.1-pro-preview-customtools"]  # When falling back to gemini, use this model
+"glm-5" = ["kimi-for-coding", "gemini-3.1-pro-preview-customtools"]
 ```
 
-**How it works (from zeroclaw/src/providers/reliable.rs):**
-1. When primary provider fails, ZeroClaw tries each provider in `fallback_providers`
-2. For each fallback provider, it calls `provider_model_chain()` which looks up the provider name in `provider_model_fallbacks`
-3. If found, it uses the specified model(s) instead of the original model name
-4. If not found, it uses the original model name (which typically fails)
+**How it works in v0.1.7:**
+1. Try `glm-5` on `zai` → fails
+2. Try `glm-5` on `kimi-code` → fails (model not found)
+3. Try `glm-5` on `gemini` → fails (model not found)
+4. Fallback to `kimi-for-coding` on `zai` → fails (model not found)
+5. Fallback to `kimi-for-coding` on `kimi-code` → **should work!**
+6. If that fails, try `gemini-3.1-pro-preview-customtools` on all providers
 
-**Common mistake:** Using model-scoped keys like `"zai/glm-5" = ["kimi-code/kimi-for-coding"]` - this doesn't work because the key is not a provider name.
+**Note:** Newer versions of zeroclaw may support `provider_model_fallbacks` which uses provider names as keys. Check the zeroclaw documentation for your version.
 
 **Fallback provider API keys (environment variables):**
 ZeroClaw reads API keys from environment variables automatically based on provider name:
-- `kimi-code` → `KIMI_API_KEY` or `KIMI_CODE_API_KEY`
+- `kimi-code` → `KIMI_API_KEY`
 - `gemini` → `GEMINI_API_KEY`
 
 The `reliability.api_keys` field is `Vec<String>` for round-robin keys of the **same provider** (to handle rate limits), NOT for fallback providers. Fallback providers use their own env vars.
