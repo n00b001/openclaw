@@ -571,6 +571,10 @@ ZeroClaw is configured with the following model defaults (in `scripts/configure-
 **Primary model:**
 - `zai/glm-5` (Z.AI GLM-5)
 
+**Additional supported models with fallbacks:**
+- `zai/glm-4.7` (Z.AI GLM-4.7)
+- `zai/glm-4.4-air` (Z.AI GLM-4.4-Air)
+
 **Fallback providers:**
 - `kimi-code` - Kimi Code provider
 - `gemini` - Google Gemini via AI Studio
