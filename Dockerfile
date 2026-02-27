@@ -81,7 +81,7 @@ RUN set -eux && \
         GITHUB_OWNER="openclaw"; \
         GITHUB_REPO="openclaw"; \
     fi && \
-    if [ -n "${UPSTREAM_COMMIT}" ]; then \
+    if [ -n "${UPSTREAM_COMMIT:-}" ]; then \
         echo "Cloning at pinned commit: ${UPSTREAM_COMMIT}"; \
         git clone --depth 1 "https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}.git" . && \
         git fetch --depth 1 origin "${UPSTREAM_COMMIT}" && \
