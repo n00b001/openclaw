@@ -320,7 +320,20 @@ This makes the UI skip the pairing screen when pairing is disabled. The workarou
 ZeroClaw reads API keys from environment variables automatically based on provider name. The `reliability.api_keys` field is `Vec<String>` for round-robin keys of the **same provider** (to handle rate limits), NOT for fallback providers.
 
 **Fallback provider env vars:**
-- `kimi-code` → `KIMI_CODE_API_KEY` or `MOONSHOT_API_KEY`
-- `gemini` → `GEMINI_API_KEY` or `GOOGLE_API_KEY`
+- `kimi-code` → `KIMI_API_KEY` or `KIMI_CODE_API_KEY`
+- `gemini` → `GEMINI_API_KEY`
+
+**Provider-scoped model fallbacks (CRITICAL):**
+
+ZeroClaw's `model_fallbacks` config uses **provider-scoped keys**, not model-scoped keys. When falling back to a different provider, ZeroClaw looks up the provider name to find the correct model:
+
+```javascript
+model_fallbacks: {
+    'kimi-code': ['kimi-for-coding'],  // When falling back to kimi-code, use kimi-for-coding
+    'gemini': ['gemini-3.1-pro-preview-customtools'],  // When falling back to gemini, use this model
+},
+```
+
+**Common mistake:** Using model-scoped keys like `"zai/glm-5" = ["kimi-code/kimi-for-coding"]` - this doesn't work because the key is not a provider name.
 
 **Important:** When adding new fallback providers, add their env vars to the whitelist in `scripts/entrypoint.sh` (the `--whitelist-environment` flag in the `su` command). Without this, the env vars are lost when switching users.
