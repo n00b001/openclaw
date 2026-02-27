@@ -592,3 +592,13 @@ This rewrites the response to set `paired: true` when `require_pairing: false`, 
 - `/pair` - UI submits pairing codes here
 - `/healthz` - Docker health check
 - `/hooks` - External webhooks (uses token auth, not HTTP Basic)
+
+**Troubleshooting if UI still shows pairing screen:**
+1. **Pull latest image**: `docker pull ghcr.io/xfanth/zeroclaw:zeroclaw_main`
+2. **Restart container**: `docker compose down && docker compose up -d`
+3. **Check image build date**: `docker logs <container> 2>&1 | grep BUILD_DATE`
+   - Should be after 2026-02-26 (when fix was merged)
+4. **Verify /health response**: `curl -s http://localhost:8080/health | jq`
+   - Should return `"paired": true, "require_pairing": false`
+5. **Check nginx config**: `docker exec <container> cat /etc/nginx/sites-available/zeroclaw | grep -A10 "location /health"`
+   - Should have `auth_basic off;` and `sub_filter` directive

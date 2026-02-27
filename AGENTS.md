@@ -303,8 +303,15 @@ If the UI shows the pairing screen even when `require_pairing: false`, check tha
 
 ZeroClaw UI has a bug where it checks the `paired` field instead of `require_pairing` from the `/health` endpoint. When `require_pairing: false`, the backend returns `paired: false`, causing the UI to show the pairing screen.
 
+**Fix**: The config in `scripts/configure-zeroclaw.js` sets `require_pairing: false` to disable pairing.
+
 **Workaround**: The nginx config in `scripts/entrypoint.sh` uses `sub_filter` to modify the `/health` response for ZeroClaw:
 - Before: `{"paired":false,"require_pairing":false,...}`
 - After: `{"paired":true,"require_pairing":false,...}`
 
 This makes the UI skip the pairing screen when pairing is disabled. The workaround is only applied when `UPSTREAM=zeroclaw`.
+
+**Troubleshooting**: If the UI still shows the pairing screen:
+1. Verify you're using the latest image: `docker pull ghcr.io/xfanth/zeroclaw:zeroclaw_main`
+2. Check the image build date in logs: `docker logs <container> 2>&1 | grep BUILD_DATE`
+3. Verify the /health endpoint returns `"paired":true,"require_pairing":false`: `curl -s http://localhost:8080/health | jq`
