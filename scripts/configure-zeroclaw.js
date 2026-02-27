@@ -143,6 +143,8 @@ function buildConfig(STATE_DIR, WORKSPACE_DIR, parseList, PROVIDER_URLS, PROVIDE
             scheduler_retries: 2,
             model_fallbacks: {
                 'glm-5': ['kimi-for-coding', 'gemini-3.1-pro-preview-customtools'],
+                'glm-4.7': ['kimi-for-coding', 'gemini-3.1-pro-preview-customtools'],
+                'glm-4.4-air': ['kimi-for-coding', 'gemini-3.1-pro-preview-customtools'],
             },
         },
 
