@@ -40,14 +40,11 @@ function buildConfig(STATE_DIR, WORKSPACE_DIR, parseList, PROVIDER_URLS, PROVIDE
     };
 
     let apiKey = '';
-    let defaultProvider = providerAliases[provider] || provider;
+    const defaultProvider = 'zai';
+    const defaultModel = 'glm-5';
     for (const [name, key] of Object.entries(providerKeys)) {
         if (key) {
             apiKey = key;
-            const lookupProvider = providerAliases[provider] || provider;
-            if (lookupProvider === name || !providerKeys[lookupProvider]) {
-                defaultProvider = name;
-            }
             break;
         }
     }
@@ -59,7 +56,7 @@ function buildConfig(STATE_DIR, WORKSPACE_DIR, parseList, PROVIDER_URLS, PROVIDE
     const config = {
         api_key: apiKey,
         default_provider: defaultProvider,
-        default_model: model,
+        default_model: defaultModel,
         default_temperature: 0.7,
         model_routes: [],
         embedding_routes: [],
