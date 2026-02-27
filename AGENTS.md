@@ -360,7 +360,7 @@ This makes the UI skip the pairing screen when pairing is disabled. The workarou
 **Troubleshooting**: If the UI still shows the pairing screen:
 1. Verify you're using the latest image: `docker pull ghcr.io/xfanth/zeroclaw:zeroclaw_main`
 2. Check the image build date in logs: `docker logs <container> 2>&1 | grep BUILD_DATE`
-3. Verify the /health endpoint returns `"paired":true,"require_pairing":false`: `curl -s http://localhost:8080/health | jq`
+3. Verify the /health endpoint returns `"paired":true`: `curl -s http://localhost:8080/health | jq`
 ### ZeroClaw Fallback Provider API Keys
 
 ZeroClaw reads API keys from environment variables automatically based on provider name. The `reliability.api_keys` field is `Vec<String>` for round-robin keys of the **same provider** (to handle rate limits), NOT for fallback providers.

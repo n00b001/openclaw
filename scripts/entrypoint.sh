@@ -143,15 +143,16 @@ if [ "$(id -u)" = "0" ] && [ "${ZEROCLAW_ROOT_MODE:-}" != "1" ]; then
 
     # For ZeroClaw: modify /health response to fix UI pairing check bug
     # ZeroClaw UI checks "paired" instead of "require_pairing", causing
-    # the pairing screen to show even when pairing is disabled.
+    #   pairing screen to show even when pairing is disabled.
     # Workaround: use nginx sub_filter to set paired=true when require_pairing=false
     # shellcheck disable=SC2034
     if [ "$UPSTREAM" = "zeroclaw" ]; then
-        NGINX_HEALTH_SUBFILTER='        proxy_buffering on;
-        sub_filter_types application/json;
-        sub_filter '\''"paired":false,"require_pairing":false'\'' '\''"paired":true,"require_pairing":false'\'';
+        NGINX_HEALTH_PROXY_BUFFERING='        proxy_buffering on;'
+        NGINX_HEALTH_SUBFILTER='        sub_filter_types application/json;
+        sub_filter '\''"paired":false'\'' '\''"paired":true'\'';
         sub_filter_once off;'
     else
+        NGINX_HEALTH_PROXY_BUFFERING=""
         NGINX_HEALTH_SUBFILTER=""
     fi
 
@@ -205,6 +206,7 @@ server {
     # Alternative health endpoint for zeroclaw (no auth required for UI pairing check)
     location /health {
         auth_basic off;
+$NGINX_HEALTH_PROXY_BUFFERING
         proxy_pass http://${UPSTREAM}_gateway;
         proxy_http_version 1.1;
         proxy_set_header Host \$host;
