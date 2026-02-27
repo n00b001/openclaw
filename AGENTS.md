@@ -68,6 +68,18 @@ After creating a PR, you **MUST** monitor it until all checks pass:
 
 **Never abandon a PR with failing checks.**
 
+### Post-Merge Monitoring (CRITICAL)
+After merging a PR, you **MUST** monitor post-merge actions until they succeed:
+
+1. Check post-merge workflow status: `gh run list --branch main --limit 1`
+2. View the run: `gh run view <run-id>`
+3. If failures occur, create a fix PR immediately
+4. Verify deployments and builds complete successfully
+
+**Never consider a task complete until post-merge actions succeed.**
+
+**CRITICAL: Any changes not in a PR will be LOST.** Always create a PR for every change, no matter how small.
+
 **Project Memory**: Store project-specific knowledge in MEMORY.md (patterns, gotchas, reference info).
 
 ## Development Principles
