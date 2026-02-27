@@ -194,8 +194,21 @@ When the entrypoint script runs as root and then switches to the upstream user v
 - **Location**: `scripts/entrypoint.sh` line ~93 in the `su` command
 - **Fix**: Add any new environment variables that configure.js reads to the whitelist
 
+### SHELL Environment Variable
+
+ZeroClaw's `doctor` command checks for `$SHELL` being set. If not set, it shows a warning: `⚠️ $SHELL not set`
+
+**Fix applied in `scripts/entrypoint.sh`:**
+1. Export SHELL with default `/bin/bash`: `export SHELL="${SHELL:-/bin/bash}"`
+2. Add SHELL to supervisord environment: `environment=...,SHELL="/bin/bash",...`
+3. Add SHELL to `--whitelist-environment` for su command
+
+The `shell_env_passthrough` in `configure-zeroclaw.js` already includes `SHELL` in its list, but the environment variable must be set first.
+
 Current whitelist (from `scripts/entrypoint.sh` line 93):
 ```
+HOME
+SHELL
 UPSTREAM
 OPENCLAW_STATE_DIR
 OPENCLAW_WORKSPACE_DIR
