@@ -315,3 +315,12 @@ This makes the UI skip the pairing screen when pairing is disabled. The workarou
 1. Verify you're using the latest image: `docker pull ghcr.io/xfanth/zeroclaw:zeroclaw_main`
 2. Check the image build date in logs: `docker logs <container> 2>&1 | grep BUILD_DATE`
 3. Verify the /health endpoint returns `"paired":true,"require_pairing":false`: `curl -s http://localhost:8080/health | jq`
+### ZeroClaw Fallback Provider API Keys
+
+ZeroClaw reads API keys from environment variables automatically based on provider name. The `reliability.api_keys` field is `Vec<String>` for round-robin keys of the **same provider** (to handle rate limits), NOT for fallback providers.
+
+**Fallback provider env vars:**
+- `kimi-code` → `KIMI_CODE_API_KEY` or `MOONSHOT_API_KEY`
+- `gemini` → `GEMINI_API_KEY` or `GOOGLE_API_KEY`
+
+**Important:** When adding new fallback providers, add their env vars to the whitelist in `scripts/entrypoint.sh` (the `--whitelist-environment` flag in the `su` command). Without this, the env vars are lost when switching users.
