@@ -420,6 +420,7 @@ ZeroClaw uses permissive defaults for full autonomy mode. Key settings in `scrip
 - `auto_approve: ['*']` - Auto-approve all tool calls
 - `require_approval_for_medium_risk: false` - No approval for medium-risk actions
 - `block_high_risk_commands: false` - Allow high-risk commands
+- `max_actions_per_hour: 2000` - High action limit for intensive workloads
 - `shell_env_passthrough: ['PATH', 'HOME', ...]` - Common env vars passed to shell
 
 **Note**: `shell_env_passthrough` cannot use `*` wildcard - it must be specific env var names matching `[A-Za-z_][A-Za-z0-9_]*` pattern.
