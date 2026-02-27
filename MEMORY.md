@@ -28,6 +28,17 @@ This workflow is NON-NEGOTIABLE for all code changes.
 
 **NEVER abandon a PR with failing checks.**
 
+### Post-Merge Verification (CRITICAL)
+
+**When the user tells you a PR is merged, you MUST immediately check post-merge actions:**
+
+1. **Check workflow status**: `gh run list --branch=<branch-name> --limit=3`
+2. **Verify all actions succeeded**: Look for "success" conclusion for all post-merge workflows
+3. **Report outcome**: Tell the user whether post-merge actions succeeded or failed
+4. **Only then clean up**: Remove worktree and report completion
+
+**Do NOT wait for the user to ask you** - this check should happen automatically when they say "merged".
+
 **Common fixes:**
 - Pre-commit: Run `pre-commit run --all-files` locally before committing
 - Tests: Run `uv run pytest tests/unit -v` locally
