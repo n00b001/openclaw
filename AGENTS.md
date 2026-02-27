@@ -308,3 +308,25 @@ ZeroClaw UI has a bug where it checks the `paired` field instead of `require_pai
 - After: `{"paired":true,"require_pairing":false,...}`
 
 This makes the UI skip the pairing screen when pairing is disabled. The workaround is only applied when `UPSTREAM=zeroclaw`.
+
+### ZeroClaw Fallback Provider Configuration
+
+ZeroClaw's `model_fallbacks` config uses **model names as keys** (not provider names). When a model fails on all providers, ZeroClaw tries each fallback model with each provider.
+
+```javascript
+model_fallbacks: {
+    'glm-5': ['kimi-for-coding', 'gemini-3.1-pro-preview-customtools'],
+},
+```
+
+**How fallback works:**
+1. Try `glm-5` on all providers (zai, kimi-code, gemini)
+2. Fallback to `kimi-for-coding` on all providers
+3. Fallback to `gemini-3.1-pro-preview-customtools` on all providers
+
+**Required env vars:**
+- `ZAI_API_KEY` for primary (zai provider)
+- `KIMI_API_KEY` for kimi-code fallback
+- `gemini` → `GEMINI_API_KEY`
+
+**Important:** When adding new fallback providers, add their env vars to the whitelist in `scripts/entrypoint.sh`.

@@ -533,17 +533,30 @@ function toTomlKey(key) {
 ZeroClaw is configured with the following model defaults (in `scripts/configure-zeroclaw.js`):
 
 **Primary model:**
-- `zai-coding-plan/glm-5` (z.ai glm coding plan)
+- `zai/glm-5` (Z.AI GLM-5)
 
 **Fallback providers:**
 - `kimi-code` - Kimi Code provider
 - `gemini` - Google Gemini via AI Studio
 
-**Model fallback chain:**
+**Model fallbacks (v0.1.7 format):**
+
+ZeroClaw v0.1.7 uses **model names as keys** in `model_fallbacks` (not provider names). When a model fails on all providers, ZeroClaw tries each fallback model with each provider.
+
 ```toml
-[model_fallbacks]
-"zai-coding-plan/glm-5" = ["kimi-code/kimi-k2.5", "gemini/gemini-3-pro"]
+[reliability.model_fallbacks]
+"glm-5" = ["kimi-for-coding", "gemini-3.1-pro-preview-customtools"]
 ```
+
+**How fallback works:**
+1. Try `glm-5` on all providers (zai, kimi-code, gemini) → fails
+2. Fallback to `kimi-for-coding` on all providers → kimi-code should work
+3. Fallback to `gemini-3.1-pro-preview-customtools` on all providers → gemini should work
+
+**Required env vars:**
+- `ZAI_API_KEY` for primary (zai provider)
+- `KIMI_API_KEY` for kimi-code fallback
+- `GEMINI_API_KEY` for gemini fallback
 
 **Agent settings:**
 - `max_tool_iterations: 1000` - High iteration limit for complex tasks
