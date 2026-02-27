@@ -398,9 +398,10 @@ This command starts all enabled communication channels defined in the config.
 ZeroClaw uses permissive defaults for full autonomy mode. Key settings in `scripts/configure-zeroclaw.js`:
 
 ### Provider Settings
-- `default_provider: 'zai'` - Z.AI as default provider (GLM models)
-- `default_model: 'glm-5'` - GLM-5 as default model
-- Provider keys are checked in order: ZAI_API_KEY first, then KIMI_API_KEY, etc.
+- `default_provider: 'zai'` - Z.AI as default provider (fixed, never changes)
+- `default_model: 'glm-5'` - GLM-5 as default model (fixed, never changes)
+- `api_key` - Uses first available key from: ZAI_API_KEY, KIMI_API_KEY, etc.
+- Fallback models handle requests when ZAI_API_KEY is unavailable
 
 ### Autonomy Settings
 - `level: 'full'` - Full autonomy mode (not supervised)
