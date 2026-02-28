@@ -119,20 +119,27 @@ jobs:
           fi
 
           if [ "$BUILD_ALL" = "true" ]; then
-            echo "upstreams=[\"zeroclaw\"]" >> $GITHUB_OUTPUT
+            echo "upstreams=[\"openclaw\"]" >> $GITHUB_OUTPUT
             echo "any_changes=true" >> $GITHUB_OUTPUT
             exit 0
           fi
 
+          BUILD_OPENCLAW="false"
           BUILD_ZEROCLAW="false"
           for file in $CHANGED_FILES; do
             case "$file" in
+              scripts/configure-openclaw.js|.openclaw-*|openclaw-*) BUILD_OPENCLAW="true" ;;
               Dockerfile-zeroclaw|scripts/configure-zeroclaw.js|.zeroclaw-*|zeroclaw-*) BUILD_ZEROCLAW="true" ;;
             esac
           done
 
           FIRST="true"
           UPSTREAMS_JSON="["
+          if [ "$BUILD_OPENCLAW" = "true" ]; then
+            [ "$FIRST" = "false" ] && UPSTREAMS_JSON="${UPSTREAMS_JSON},"
+            UPSTREAMS_JSON="${UPSTREAMS_JSON}\"openclaw\""
+            FIRST="false"
+          fi
           if [ "$BUILD_ZEROCLAW" = "true" ]; then
             [ "$FIRST" = "false" ] && UPSTREAMS_JSON="${UPSTREAMS_JSON},"
             UPSTREAMS_JSON="${UPSTREAMS_JSON}\"zeroclaw\""
@@ -207,6 +214,9 @@ jobs:
       matrix:
         upstream: ${{ fromJson(needs.detect-changes.outputs.upstreams) }}
         include:
+          - upstream: openclaw
+            github_owner: openclaw
+            github_repo: openclaw
           - upstream: zeroclaw
             github_owner: zeroclaw-labs
             github_repo: zeroclaw
@@ -231,6 +241,11 @@ jobs:
         run: |
           UPSTREAM="${{ matrix.upstream }}"
           case "$UPSTREAM" in
+            openclaw)
+              PREFIX="oc"
+              OWNER="openclaw"
+              REPO="openclaw"
+              ;;
             zeroclaw)
               PREFIX="zc"
               OWNER="zeroclaw-labs"
@@ -427,6 +442,13 @@ jobs:
     strategy:
       matrix:
         upstream: ${{ fromJson(needs.detect-changes.outputs.upstreams) }}
+        include:
+          - upstream: openclaw
+            github_owner: openclaw
+            github_repo: openclaw
+          - upstream: zeroclaw
+            github_owner: zeroclaw-labs
+            github_repo: zeroclaw
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -453,9 +475,18 @@ jobs:
           case "$UPSTREAM" in
             zeroclaw)
               PREFIX="zc"
+              OWNER="zeroclaw-labs"
+              REPO="zeroclaw"
+              ;;
+            openclaw)
+              PREFIX="oc"
+              OWNER="openclaw"
+              REPO="openclaw"
               ;;
             *)
               PREFIX="${UPSTREAM:0:2}"
+              OWNER="${{ matrix.github_owner }}"
+              REPO="${{ matrix.github_repo }}"
               ;;
           esac
 
@@ -474,12 +505,12 @@ jobs:
           if [ "$TAGGED_CHANGED" = "true" ]; then
             TRACKED_COMMIT=$(cat "$TAGGED_FILE" 2>/dev/null || echo "")
             if [ -n "$TRACKED_COMMIT" ]; then
-              TAG=$(curl -s "https://api.github.com/repos/zeroclaw-labs/zeroclaw/git/refs/tags" | \
+              TAG=$(curl -s "https://api.github.com/repos/${OWNER}/${REPO}/git/refs/tags" | \
                 jq -r --arg commit "$TRACKED_COMMIT" '.[] | select(.object.sha == $commit or .object.object.sha == $commit) | .ref' | \
                 sed 's|refs/tags/||' | head -n1)
             fi
             if [ -z "$TAG" ]; then
-              TAG=$(curl -s "https://api.github.com/repos/zeroclaw-labs/zeroclaw/releases/latest" | jq -r '.tag_name // empty')
+              TAG=$(curl -s "https://api.github.com/repos/${OWNER}/${REPO}/releases/latest" | jq -r '.tag_name // empty')
             fi
             if [ -n "$TAG" ] && [ "$TAG" != "null" ]; then
               UPSTREAM_TAG="${UPSTREAM}_$TAG"
