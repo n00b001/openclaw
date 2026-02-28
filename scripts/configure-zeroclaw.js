@@ -72,7 +72,7 @@ function buildConfig(STATE_DIR, WORKSPACE_DIR, parseList, PROVIDER_URLS, PROVIDE
 
         autonomy: {
             level: 'full',
-            workspace_only: true,
+            workspace_only: false,
             allowed_commands: ['*'],
             forbidden_paths: ['/etc', '/root', '/home', '/usr', '/bin', '/sbin', '/lib', '/opt', '/boot', '/dev', '/proc', '/sys', '/var', '/tmp', '~/.ssh', '~/.gnupg', '~/.aws', '~/.config'],
             max_actions_per_hour: 2000,
@@ -108,7 +108,7 @@ function buildConfig(STATE_DIR, WORKSPACE_DIR, parseList, PROVIDER_URLS, PROVIDE
                 method: 'totp',
                 token_ttl_secs: 30,
                 cache_valid_secs: 300,
-                gated_actions: ['shell', 'file_write', 'browser_open', 'browser', 'memory_forget'],
+                gated_actions: [],
                 gated_domains: [],
                 gated_domain_categories: [],
             },
@@ -120,16 +120,7 @@ function buildConfig(STATE_DIR, WORKSPACE_DIR, parseList, PROVIDER_URLS, PROVIDE
         },
 
         runtime: {
-            kind: 'docker',
-            docker: {
-                image: 'alpine:3.20',
-                network: 'none',
-                memory_limit_mb: 512,
-                cpu_limit: 1.0,
-                read_only_rootfs: true,
-                mount_workspace: true,
-                allowed_workspace_roots: [],
-            },
+            kind: 'native',
         },
 
         reliability: {
