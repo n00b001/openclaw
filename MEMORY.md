@@ -460,7 +460,7 @@ ZeroClaw uses permissive defaults for full autonomy mode. Key settings in `scrip
 ### Enabled Tools
 - `browser.enabled: true` - Browser automation enabled
 - `browser.allowed_domains: ['*']` - All domains allowed
-- `browser.native_webdriver_url: 'http://openclaw-browser:9222'` - CDP endpoint
+- `browser.native_webdriver_url: 'http://gateway-browser:9222'` - CDP endpoint
 - `http_request.enabled: true` - HTTP requests enabled
 - `web_fetch.enabled: true` - Web fetching enabled
 - `web_search.enabled: true` - Web search enabled
@@ -477,7 +477,9 @@ ZeroClaw uses permissive defaults for full autonomy mode. Key settings in `scrip
 
 ### Gateway Settings
 - `gateway.require_pairing: false` - No pairing required
+- `gateway.allow_public_bind: true` - Public binding enabled for Docker
 - `gateway.trust_forwarded_headers: true` - Trust X-Forwarded-* headers
+- `gateway.host: '0.0.0.0'` - Binds to all interfaces when public binding enabled
 
 ### ZeroClaw Runtime Mode
 
@@ -490,38 +492,70 @@ ZeroClaw runs via `zeroclaw daemon` (not `zeroclaw gateway`) in Docker:
 
 **Important**: The daemon does NOT read `gateway.port` from config - you must pass `-p <port>` explicitly:
 ```bash
-zeroclaw daemon -p 18789
+zeroclaw daemon -p 8080
 ```
 
 This is why channels weren't starting automatically with `zeroclaw gateway` - channels require the daemon runtime.
+
+### ZeroClaw Public Binding (No Nginx)
+
+ZeroClaw uses **public binding without nginx** following the upstream docker-compose.yml pattern:
+
+- `ZEROCLAW_ALLOW_PUBLIC_BIND=true` - allows binding to 0.0.0.0
+- No nginx reverse proxy - gateway binds directly to external port (8080)
+- `require_pairing: false` - pairing disabled, all requests accepted
+- `allow_public_bind: true` - binds to 0.0.0.0 instead of 127.0.0.1
+
+**Why no nginx?** The upstream docker-compose.yml uses public binding directly, avoiding the complexity of nginx auth interfering with the gateway's token-based authentication. This fixes the issue where pairing codes were recognized but API calls still returned 401.
+
+**Key differences from other upstreams:**
+- No nginx process running
+- Gateway binds directly to `0.0.0.0:8080` (external port)
+- No HTTP basic auth - uses gateway's built-in auth
+- Smoke tests skip nginx checks for zeroclaw
+
+**Reference:** https://github.com/zeroclaw-labs/zeroclaw/blob/main/docker-compose.yml
 
 ## Supervisord Logging for Docker
 
 The container uses supervisord to manage nginx and the upstream gateway. For `docker logs` to capture output:
 
-**ZeroClaw (special handling):**
+**ZeroClaw (special handling - no nginx):**
 - Runs supervisord as root (not switched via `su`)
 - Uses `user=zeroclaw` in program sections for privilege dropping
+- **No nginx program** - zeroclaw binds directly to external port with public binding
 - This allows `/dev/stdout` to be opened successfully for log redirection
 
-**Configuration in `scripts/entrypoint.sh`:**
+**Configuration in `scripts/entrypoint.sh` for ZeroClaw:**
 ```ini
 [supervisord]
 nodaemon=true
 logfile=/dev/null
 pidfile=/tmp/supervisord.pid
 
-[program:nginx]
-command=nginx -g "daemon off;"
+[program:zeroclaw]
+command=/usr/local/bin/zeroclaw daemon -p 8080
 user=zeroclaw
 stdout_logfile=/dev/stdout
 stdout_logfile_maxbytes=0
 stderr_logfile=/dev/stderr
 stderr_logfile_maxbytes=0
+environment=HOME="/data",...,ZEROCLAW_ALLOW_PUBLIC_BIND="true"
+```
 
-[program:zeroclaw]
-command=/usr/local/bin/zeroclaw daemon -p 18789
-user=zeroclaw
+**Configuration for other upstreams (with nginx):**
+```ini
+[program:nginx]
+command=nginx -g "daemon off;"
+user=openclaw
+stdout_logfile=/dev/stdout
+stdout_logfile_maxbytes=0
+stderr_logfile=/dev/stderr
+stderr_logfile_maxbytes=0
+
+[program:openclaw]
+command=/usr/local/bin/openclaw gateway --port 18789 --bind loopback
+user=openclaw
 stdout_logfile=/dev/stdout
 stdout_logfile_maxbytes=0
 stderr_logfile=/dev/stderr
@@ -608,56 +642,23 @@ This ensures graceful degradation: first within Z.AI, then to openrouter/free (f
 - `max_tool_iterations: 1000` - High iteration limit for complex tasks
 - `max_history_messages: 500` - Large message history for context
 
-## ZeroClaw UI Pairing Check Bug
+## ZeroClaw UI Pairing
 
-**Problem:** Even with `require_pairing: false` in config, the ZeroClaw UI still shows the pairing screen.
+**Solution:** ZeroClaw now uses public binding without nginx, eliminating the auth issues:
 
-**Root Cause 1:** The nginx config didn't disable HTTP Basic Auth for the `/health` endpoint. The UI calls `/health` to check if pairing is required:
-```javascript
-// web/src/hooks/useAuth.tsx
-getPublicHealth()
-  .then((health) => {
-    if (!health.require_pairing) {
-      setAuthenticated(true);  // Should skip pairing screen
-    }
-  })
-```
+1. `require_pairing: false` - No pairing required, all requests accepted
+2. `allow_public_bind: true` - Gateway binds to 0.0.0.0 directly
+3. No nginx reverse proxy - no HTTP Basic Auth interference
 
-If `/health` returns 401 (due to HTTP Basic Auth), the UI falls through to showing the pairing screen.
+**Previous issue (now resolved):**
+- nginx's HTTP Basic Auth was interfering with the gateway's token-based auth
+- Pairing codes were recognized but API calls returned 401
+- The fix was to remove nginx entirely and use public binding
 
-**Fix 1:** Added `auth_basic off;` to the following nginx locations in `scripts/entrypoint.sh`:
-- `/healthz` - Health check endpoint
-- `/health` - ZeroClaw health endpoint (returns `require_pairing` status)
-- `/pair` - Pairing endpoint (used by UI to submit pairing codes)
-- `/hooks` - Webhook endpoint (token-based auth)
-
-**Root Cause 2:** ZeroClaw UI checks the `paired` field instead of `require_pairing`. When `require_pairing: false`, the backend returns `paired: false`, and the UI shows the pairing screen.
-
-**Fix 2:** Added nginx `sub_filter` to modify the `/health` response for ZeroClaw only:
-```nginx
-location /health {
-    ...
-    proxy_buffering on;
-    sub_filter_types application/json;
-    sub_filter '"paired":false,"require_pairing":false' '"paired":true,"require_pairing":false';
-    sub_filter_once off;
-}
-```
-
-This rewrites the response to set `paired: true` when `require_pairing: false`, making the UI skip the pairing screen.
-
-**Related endpoints that must NOT have auth_basic:**
-- `/health` - UI checks `require_pairing` status here
-- `/pair` - UI submits pairing codes here
-- `/healthz` - Docker health check
-- `/hooks` - External webhooks (uses token auth, not HTTP Basic)
-
-**Troubleshooting if UI still shows pairing screen:**
+**Troubleshooting if UI shows issues:**
 1. **Pull latest image**: `docker pull ghcr.io/xfanth/zeroclaw:zeroclaw_main`
 2. **Restart container**: `docker compose down && docker compose up -d`
-3. **Check image build date**: `docker logs <container> 2>&1 | grep BUILD_DATE`
-   - Should be after 2026-02-26 (when fix was merged)
-4. **Verify /health response**: `curl -s http://localhost:8080/health | jq`
-   - Should return `"paired": true, "require_pairing": false`
-5. **Check nginx config**: `docker exec <container> cat /etc/nginx/sites-available/zeroclaw | grep -A10 "location /health"`
-   - Should have `auth_basic off;` and `sub_filter` directive
+3. **Verify /health response**: `curl -s http://localhost:8080/health | jq`
+   - Should return `"require_pairing": false`
+4. **Check gateway binding**: `docker exec <container> netstat -tlnp | grep 8080`
+   - Should show `0.0.0.0:8080` (not `127.0.0.1:8080`)

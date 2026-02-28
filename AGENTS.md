@@ -298,11 +298,11 @@ ZeroClaw uses permissive defaults for full autonomy. Key settings in `scripts/co
 - **Runtime kind**: `docker` (containerized execution)
 - **Shell env passthrough**: Common env vars (PATH, HOME, USER, etc.) - **must be specific names, not `*` wildcard**
 - **Enabled tools**: browser, http_request, web_fetch, web_search, composio
-- **Browser CDP**: `http://openclaw-browser:9222` (for docker-compose setup)
+- **Browser CDP**: `http://gateway-browser:9222` (for docker-compose setup)
 - **Browser allowed domains**: `['*']` (all domains)
 - **Composio**: Requires `COMPOSIO_API_KEY` environment variable
 - **Command logger**: Enabled (for auditing)
-- **Gateway**: No pairing required, trust forwarded headers
+- **Gateway**: No pairing required (`require_pairing: false`), public binding enabled
 
 ### ZeroClaw Runtime Mode
 
@@ -334,33 +334,34 @@ session_path = "/data/.zeroclaw/state/whatsapp-web/session.db"  # NOT "~/.zerocl
 
 **Why**: The ZeroClaw CLI wrapper at `/usr/local/bin/zeroclaw` sets `HOME=/data` before executing the binary. Session paths with `~` would resolve incorrectly if the wrapper's HOME setting is not applied. Using absolute paths ensures consistency.
 
-### ZeroClaw Nginx Auth Configuration
+### ZeroClaw Public Binding (No Nginx)
 
-The ZeroClaw UI checks `/health` to determine if pairing is required. These endpoints must have `auth_basic off;` in nginx:
+ZeroClaw uses **public binding without nginx** following the upstream docker-compose.yml pattern:
+
+- `ZEROCLAW_ALLOW_PUBLIC_BIND=true` - allows binding to 0.0.0.0
+- No nginx reverse proxy - gateway binds directly to external port
+- `require_pairing: false` - pairing disabled, all requests accepted
+- `allow_public_bind: true` - binds to 0.0.0.0 instead of 127.0.0.1
+
+**Why no nginx?** The upstream docker-compose.yml uses public binding directly, avoiding the complexity of nginx auth interfering with the gateway's token-based authentication.
+
+**Key differences from other upstreams:**
+- No nginx process running
+- Gateway binds directly to `0.0.0.0:8080` (external port)
+- No HTTP basic auth - uses gateway's built-in auth
+- Smoke tests skip nginx checks for zeroclaw
+
+### ZeroClaw UI Pairing Configuration
+
+The ZeroClaw UI checks `/health` to determine if pairing is required:
 
 - `/health` - UI checks `require_pairing` status
 - `/healthz` - Docker health check
-- `/pair` - UI submits pairing codes
-- `/hooks` - External webhooks (uses token auth)
+- `/pair` - UI submits pairing codes (if pairing enabled)
+- `/hooks` - External webhooks
 
-If the UI shows the pairing screen even when `require_pairing: false`, check that these locations have `auth_basic off;` in `scripts/entrypoint.sh`.
+When `require_pairing: false`, the gateway accepts all requests without pairing codes.
 
-### ZeroClaw UI Pairing Bug Workaround
-
-ZeroClaw UI has a bug where it checks the `paired` field instead of `require_pairing` from the `/health` endpoint. When `require_pairing: false`, the backend returns `paired: false`, causing the UI to show the pairing screen.
-
-**Fix**: The config in `scripts/configure-zeroclaw.js` sets `require_pairing: false` to disable pairing.
-
-**Workaround**: The nginx config in `scripts/entrypoint.sh` uses `sub_filter` to modify the `/health` response for ZeroClaw:
-- Before: `{"paired":false,"require_pairing":false,...}`
-- After: `{"paired":true,"require_pairing":false,...}`
-
-This makes the UI skip the pairing screen when pairing is disabled. The workaround is only applied when `UPSTREAM=zeroclaw`.
-
-**Troubleshooting**: If the UI still shows the pairing screen:
-1. Verify you're using the latest image: `docker pull ghcr.io/xfanth/zeroclaw:zeroclaw_main`
-2. Check the image build date in logs: `docker logs <container> 2>&1 | grep BUILD_DATE`
-3. Verify the /health endpoint returns `"paired":true,"require_pairing":false`: `curl -s http://localhost:8080/health | jq`
 ### ZeroClaw Fallback Provider API Keys
 
 ZeroClaw reads API keys from environment variables automatically based on provider name. The `reliability.api_keys` field is `Vec<String>` for round-robin keys of the **same provider** (to handle rate limits), NOT for fallback providers.

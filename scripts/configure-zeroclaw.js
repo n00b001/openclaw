@@ -50,7 +50,7 @@ function buildConfig(STATE_DIR, WORKSPACE_DIR, parseList, PROVIDER_URLS, PROVIDE
     }
 
     const gatewayPort = parseInt(process.env.OPENCLAW_INTERNAL_GATEWAY_PORT || '18789', 10);
-    const gatewayHost = process.env.ZEROCLAW_GATEWAY_HOST || '127.0.0.1';
+    const gatewayHost = process.env.ZEROCLAW_ALLOW_PUBLIC_BIND === 'true' ? '0.0.0.0' : (process.env.ZEROCLAW_GATEWAY_HOST || '127.0.0.1');
 
     // Build complete zeroclaw config based on zeroclaw onboard output
     const config = {
@@ -221,8 +221,8 @@ function buildConfig(STATE_DIR, WORKSPACE_DIR, parseList, PROVIDER_URLS, PROVIDE
         gateway: {
             port: gatewayPort,
             host: gatewayHost,
-            require_pairing: true,
-            allow_public_bind: false,
+            require_pairing: false,
+            allow_public_bind: true,
             paired_tokens: [],
             pair_rate_limit_per_minute: 10,
             webhook_rate_limit_per_minute: 60,
@@ -247,7 +247,7 @@ function buildConfig(STATE_DIR, WORKSPACE_DIR, parseList, PROVIDER_URLS, PROVIDE
             allowed_domains: ['*'],
             backend: 'agent_browser',
             native_headless: true,
-            native_webdriver_url: 'http://openclaw-browser:9222',
+            native_webdriver_url: 'http://gateway-browser:9222',
             computer_use: {
                 endpoint: 'http://127.0.0.1:8787/v1/actions',
                 timeout_ms: 15000,
