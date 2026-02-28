@@ -486,12 +486,17 @@ fi
 log_info "Generating $UPSTREAM configuration..."
 node /app/scripts/configure.js
 
-# For ZeroClaw running as root, ensure config files are readable by zeroclaw user
-if [ "$UPSTREAM" = "zeroclaw" ] && [ "$(id -u)" = "0" ]; then
-    log_info "Fixing config file permissions for zeroclaw user..."
-    chown -R zeroclaw:zeroclaw "$STATE_DIR" 2>/dev/null || true
+# For upstreams running as root (via supervisord user=), ensure config files are readable by upstream user
+if [ "$(id -u)" = "0" ]; then
+    log_info "Fixing config file permissions for $UPSTREAM user..."
+    chown -R ${UPSTREAM}:${UPSTREAM} "$STATE_DIR" 2>/dev/null || true
     chmod 755 "$STATE_DIR" 2>/dev/null || true
-    chmod 644 "$STATE_DIR/config.toml" 2>/dev/null || true
+    if [ -f "$STATE_DIR/config.toml" ]; then
+        chmod 644 "$STATE_DIR/config.toml" 2>/dev/null || true
+    fi
+    if [ -f "$STATE_DIR/${UPSTREAM}.json" ]; then
+        chmod 644 "$STATE_DIR/${UPSTREAM}.json" 2>/dev/null || true
+    fi
 fi
 
 # =============================================================================
