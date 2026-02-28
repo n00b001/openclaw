@@ -213,13 +213,6 @@ jobs:
     strategy:
       matrix:
         upstream: ${{ fromJson(needs.detect-changes.outputs.upstreams) }}
-        include:
-          - upstream: openclaw
-            github_owner: openclaw
-            github_repo: openclaw
-          - upstream: zeroclaw
-            github_owner: zeroclaw-labs
-            github_repo: zeroclaw
     outputs:
       image_tag: ${{ steps.meta.outputs.version }}
       upstream_version: ${{ steps.determine-version.outputs.upstream_version }}
@@ -251,10 +244,19 @@ jobs:
               OWNER="zeroclaw-labs"
               REPO="zeroclaw"
               ;;
+            picoclaw)
+              PREFIX="pc"
+              OWNER="sipeed"
+              REPO="picoclaw"
+              ;;
+            ironclaw)
+              PREFIX="ic"
+              OWNER="nearai"
+              REPO="ironclaw"
+              ;;
             *)
-              PREFIX="${UPSTREAM:0:2}"
-              OWNER="${{ matrix.github_owner }}"
-              REPO="${{ matrix.github_repo }}"
+              echo "::error::Unknown upstream: $UPSTREAM"
+              exit 1
               ;;
           esac
 
@@ -442,13 +444,6 @@ jobs:
     strategy:
       matrix:
         upstream: ${{ fromJson(needs.detect-changes.outputs.upstreams) }}
-        include:
-          - upstream: openclaw
-            github_owner: openclaw
-            github_repo: openclaw
-          - upstream: zeroclaw
-            github_owner: zeroclaw-labs
-            github_repo: zeroclaw
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -473,20 +468,29 @@ jobs:
         run: |
           UPSTREAM="${{ matrix.upstream }}"
           case "$UPSTREAM" in
-            zeroclaw)
-              PREFIX="zc"
-              OWNER="zeroclaw-labs"
-              REPO="zeroclaw"
-              ;;
             openclaw)
               PREFIX="oc"
               OWNER="openclaw"
               REPO="openclaw"
               ;;
+            zeroclaw)
+              PREFIX="zc"
+              OWNER="zeroclaw-labs"
+              REPO="zeroclaw"
+              ;;
+            picoclaw)
+              PREFIX="pc"
+              OWNER="sipeed"
+              REPO="picoclaw"
+              ;;
+            ironclaw)
+              PREFIX="ic"
+              OWNER="nearai"
+              REPO="ironclaw"
+              ;;
             *)
-              PREFIX="${UPSTREAM:0:2}"
-              OWNER="${{ matrix.github_owner }}"
-              REPO="${{ matrix.github_repo }}"
+              echo "::error::Unknown upstream: $UPSTREAM"
+              exit 1
               ;;
           esac
 
