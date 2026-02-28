@@ -230,7 +230,7 @@ function buildConfig(STATE_DIR, WORKSPACE_DIR, parseList, PROVIDER_URLS, PROVIDE
         gateway: {
             port: gatewayPort,
             host: gatewayHost,
-            require_pairing: false,
+            require_pairing: true,
             allow_public_bind: false,
             paired_tokens: [],
             pair_rate_limit_per_minute: 10,
