@@ -143,8 +143,18 @@ if [ "$(id -u)" = "0" ] && [ "${ZEROCLAW_ROOT_MODE:-}" != "1" ]; then
     # shellcheck disable=SC2034
     NGINX_HEALTH_SUBFILTER=""
 
-    # Configure nginx while still root (requires write access to /etc/nginx)
-    log_info "Configuring Nginx..."
+    # ZeroClaw uses public binding (no nginx) as per upstream docker-compose
+    # https://github.com/zeroclaw-labs/zeroclaw/blob/main/docker-compose.yml
+    if [ "$UPSTREAM" = "zeroclaw" ]; then
+        log_info "ZeroClaw detected - skipping nginx, using public binding..."
+        # For zeroclaw, we bind directly to external port with public binding
+        # The daemon will bind to 0.0.0.0:EXTERNAL_GATEWAY_PORT
+        export ZEROCLAW_ALLOW_PUBLIC_BIND=true
+        export ZEROCLAW_GATEWAY_PORT="$EXTERNAL_GATEWAY_PORT"
+        export OPENCLAW_INTERNAL_GATEWAY_PORT="$EXTERNAL_GATEWAY_PORT"
+    else
+        # Configure nginx while still root (requires write access to /etc/nginx)
+        log_info "Configuring Nginx..."
     # Remove any existing nginx configs to avoid conflicts
     rm -f "/etc/nginx/sites-enabled/${UPSTREAM}" 2>/dev/null || true
     rm -f "/etc/nginx/sites-enabled/default" 2>/dev/null || true
@@ -319,6 +329,7 @@ NGINX_EOF
 
     # Clean up nginx pid file created by nginx -t (runs as root, but supervisor runs as user)
     rm -f /tmp/nginx.pid /run/nginx.pid 2>/dev/null || true
+    fi  # end of nginx configuration (non-zeroclaw)
 
     # For ZeroClaw, run supervisord as root (uses user= in program sections for privilege dropping)
     # This allows stdout/stderr redirection to work properly for Docker logs
@@ -540,7 +551,35 @@ esac
 
 mkdir -p /var/log/supervisor
 
-cat > "$STATE_DIR/supervisord.conf" << EOF
+# Build supervisord config - zeroclaw doesn't use nginx
+if [ "$UPSTREAM" = "zeroclaw" ]; then
+    cat > "$STATE_DIR/supervisord.conf" << EOF
+[supervisord]
+nodaemon=true
+logfile=/dev/null
+pidfile=/tmp/supervisord.pid
+
+[unix_http_server]
+file=/tmp/supervisor.sock
+chmod=0700
+
+[supervisorctl]
+serverurl=unix:///tmp/supervisor.sock
+
+[program:$UPSTREAM]
+command=$GATEWAY_CMD
+autostart=true
+autorestart=true
+priority=20
+user=$UPSTREAM
+stdout_logfile=/dev/stdout
+stdout_logfile_maxbytes=0
+stderr_logfile=/dev/stderr
+stderr_logfile_maxbytes=0
+environment=HOME="${SUPERVISOR_HOME}",SHELL="/bin/bash",OPENCLAW_STATE_DIR="${STATE_DIR}",OPENCLAW_WORKSPACE_DIR="${WORKSPACE_DIR}",OPENCLAW_GATEWAY_TOKEN="${OPENCLAW_GATEWAY_TOKEN}",OPENCLAW_INTERNAL_GATEWAY_PORT="${INTERNAL_GATEWAY_PORT}",NODE_ENV="production",ZEROCLAW_ALLOW_PUBLIC_BIND="${ZEROCLAW_ALLOW_PUBLIC_BIND:-true}"
+EOF
+else
+    cat > "$STATE_DIR/supervisord.conf" << EOF
 [supervisord]
 nodaemon=true
 logfile=/dev/null
@@ -576,6 +615,7 @@ stderr_logfile=/dev/stderr
 stderr_logfile_maxbytes=0
 environment=HOME="${SUPERVISOR_HOME}",SHELL="/bin/bash",OPENCLAW_STATE_DIR="${STATE_DIR}",OPENCLAW_WORKSPACE_DIR="${WORKSPACE_DIR}",OPENCLAW_GATEWAY_TOKEN="${OPENCLAW_GATEWAY_TOKEN}",OPENCLAW_INTERNAL_GATEWAY_PORT="${INTERNAL_GATEWAY_PORT}",NODE_ENV="production"
 EOF
+fi
 
 # =============================================================================
 # Add gateway readiness verification
