@@ -321,13 +321,14 @@ jobs:
         uses: useblacksmith/build-push-action@v2
         with:
           context: .
-          file: ./Dockerfile-${{ matrix.upstream }}
+          file: ./Dockerfile
           platforms: linux/amd64
           push: false
           load: true
           tags: ${{ env.IMAGE_NAME }}-${{ matrix.upstream }}:${{ steps.meta.outputs.version }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
+            UPSTREAM=${{ matrix.upstream }}
             UPSTREAM_VERSION=${{ steps.determine-version.outputs.upstream_version }}
             UPSTREAM_COMMIT=${{ steps.determine-version.outputs.upstream_commit }}
             GIT_COMMIT=${{ github.sha }}
