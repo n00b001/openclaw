@@ -146,13 +146,14 @@ if [ "$(id -u)" = "0" ] && [ "${ZEROCLAW_ROOT_MODE:-}" != "1" ]; then
     # ZeroClaw uses public binding (no nginx) as per upstream docker-compose
     # https://github.com/zeroclaw-labs/zeroclaw/blob/main/docker-compose.yml
     if [ "$UPSTREAM" = "zeroclaw" ]; then
-        log_info "ZeroClaw detected - using nginx with public binding workaround..."
+        log_info "ZeroClaw detected - using public binding without nginx..."
         # For zeroclaw, we bind directly to external port with public binding
         # The daemon will bind to 0.0.0.0:EXTERNAL_GATEWAY_PORT
         export ZEROCLAW_ALLOW_PUBLIC_BIND=true
         export ZEROCLAW_GATEWAY_PORT="$EXTERNAL_GATEWAY_PORT"
         export OPENCLAW_INTERNAL_GATEWAY_PORT="$EXTERNAL_GATEWAY_PORT"
-        log_info "Configuring Nginx..."
+    else
+        log_info "Configuring Nginx for $UPSTREAM..."
     # Remove any existing nginx configs to avoid conflicts
     rm -f "/etc/nginx/sites-enabled/${UPSTREAM}" 2>/dev/null || true
     rm -f "/etc/nginx/sites-enabled/default" 2>/dev/null || true
@@ -577,6 +578,34 @@ stderr_logfile_maxbytes=0
 environment=HOME="${SUPERVISOR_HOME}",SHELL="/bin/bash",OPENCLAW_STATE_DIR="${STATE_DIR}",OPENCLAW_WORKSPACE_DIR="${WORKSPACE_DIR}",OPENCLAW_GATEWAY_TOKEN="${OPENCLAW_GATEWAY_TOKEN}",OPENCLAW_INTERNAL_GATEWAY_PORT="${INTERNAL_GATEWAY_PORT}",NODE_ENV="production",ZEROCLAW_ALLOW_PUBLIC_BIND="${ZEROCLAW_ALLOW_PUBLIC_BIND:-true}"
 EOF
 else
+    cat > "$STATE_DIR/supervisord.conf" << EOF
+[supervisord]
+nodaemon=true
+logfile=/dev/null
+pidfile=/tmp/supervisord.pid
+
+[unix_http_server]
+file=/tmp/supervisor.sock
+chmod=0700
+
+[supervisorctl]
+serverurl=unix:///tmp/supervisor.sock
+
+[program:nginx]
+command=nginx -g "daemon off;"
+autostart=true
+autorestart=true
+priority=10
+user=$UPSTREAM
+stdout_logfile=/dev/stdout
+stdout_logfile_maxbytes=0
+stderr_logfile=/dev/stderr
+stderr_logfile_maxbytes=0
+
+[program:$UPSTREAM]
+command=$GATEWAY_CMD
+autostart=true
+autorestart=true
 priority=20
 user=$UPSTREAM
 stdout_logfile=/dev/stdout
