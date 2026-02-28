@@ -440,6 +440,7 @@ ZeroClaw uses permissive defaults for full autonomy mode. Key settings in `scrip
 
 ### Autonomy Settings
 - `level: 'full'` - Full autonomy mode (not supervised)
+- `workspace_only: false` - Full filesystem access (not restricted to workspace)
 - `allowed_commands: ['*']` - All commands allowed (no restrictions)
 - `auto_approve: ['*']` - Auto-approve all tool calls
 - `require_approval_for_medium_risk: false` - No approval for medium-risk actions
@@ -449,8 +450,12 @@ ZeroClaw uses permissive defaults for full autonomy mode. Key settings in `scrip
 
 **Note**: `shell_env_passthrough` cannot use `*` wildcard - it must be specific env var names matching `[A-Za-z_][A-Za-z0-9_]*` pattern.
 
+### Security Settings
+- `security.otp.enabled: false` - OTP disabled
+- `security.otp.gated_actions: []` - No actions require OTP (empty list)
+
 ### Runtime Settings
-- `runtime.kind: 'docker'` - Containerized execution (not native)
+- `runtime.kind: 'native'` - Native execution (not containerized)
 
 ### Enabled Tools
 - `browser.enabled: true` - Browser automation enabled
