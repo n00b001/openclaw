@@ -4,39 +4,48 @@
 // =============================================================================
 // Generates OpenClaw config from environment variables
 // Output: ~/.openclaw/openclaw.json (Node.js JSON format)
+// Default model: zai/glm-5 (matching zeroclaw defaults)
 // =============================================================================
 
 function buildConfig(STATE_DIR, WORKSPACE_DIR, parseList, PROVIDER_URLS, PROVIDER_MODELS) {
+    const primaryModel = process.env.OPENCLAW_PRIMARY_MODEL || 'zai/glm-5';
+    const fallbackModels = process.env.OPENCLAW_FALLBACK_MODELS
+        ? parseList(process.env.OPENCLAW_FALLBACK_MODELS)
+        : ['zai/glm-4.7', 'zai/glm-4.6', 'zai/glm-4.5', 'openrouter/free'];
+
     const config = {
         agents: {
             defaults: {
-                workspace: WORKSPACE_DIR
+                workspace: WORKSPACE_DIR,
+                model: {
+                    primary: primaryModel
+                }
             }
         }
     };
 
-    if (process.env.OPENCLAW_PRIMARY_MODEL) {
-        config.agents.defaults.model = {
-            primary: process.env.OPENCLAW_PRIMARY_MODEL
-        };
+    if (fallbackModels.length > 0) {
+        config.agents.defaults.model.fallbacks = fallbackModels;
     }
 
     const providers = {};
     const providerKeys = {
+        zai: process.env.ZAI_API_KEY,
+        'kimi-code': process.env.KIMI_API_KEY,
+        moonshot: process.env.KIMI_API_KEY,
+        openrouter: process.env.OPENROUTER_API_KEY,
         anthropic: process.env.ANTHROPIC_API_KEY,
         openai: process.env.OPENAI_API_KEY,
-        openrouter: process.env.OPENROUTER_API_KEY,
         gemini: process.env.GEMINI_API_KEY,
-        xai: process.env.XAI_API_KEY,
         groq: process.env.GROQ_API_KEY,
+        xai: process.env.XAI_API_KEY,
         mistral: process.env.MISTRAL_API_KEY,
         cerebras: process.env.CEREBRAS_API_KEY,
-        moonshot: process.env.MOONSHOT_API_KEY,
-        kimi: process.env.KIMI_API_KEY,
-        zai: process.env.ZAI_API_KEY,
         opencode: process.env.OPENCODE_API_KEY,
         copilot: process.env.COPILOT_GITHUB_TOKEN,
         xiaomi: process.env.XIAOMI_API_KEY,
+        venice: process.env.VENICE_API_KEY,
+        minimax: process.env.MINIMAX_API_KEY,
     };
 
     for (const [name, apiKey] of Object.entries(providerKeys)) {
