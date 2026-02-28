@@ -581,36 +581,28 @@ ZeroClaw is configured with the following model defaults (in `scripts/configure-
 - `zai/glm-4.7` (Z.AI GLM-4.7)
 - `zai/glm-4.4-air` (Z.AI GLM-4.4-Air)
 
+**Model fallbacks (within Z.AI provider):**
+All GLM models fall back to older/smaller GLM variants, with openrouter/free as final fallback:
+- `glm-5` → `glm-4.7` → `glm-4.6` → `glm-4.5` → `glm-4.5-air` → `openrouter/free`
+- `glm-4.7` → `glm-4.6` → `glm-4.5` → `glm-4.5-air` → `openrouter/free`
+- `glm-4.4-air` → `glm-4.5` → `glm-4.5-air` → `openrouter/free`
+
 **Fallback providers:**
-- `kimi-code` - Kimi Code provider
-- `gemini` - Google Gemini via AI Studio
+- `openrouter` - OpenRouter API (requires `OPENROUTER_API_KEY`)
 
-**Provider-scoped model fallbacks (CRITICAL):**
-
-ZeroClaw's `model_fallbacks` config uses **provider-scoped keys**, not model-scoped keys. When ZeroClaw falls back from the primary provider to a fallback provider, it looks up the provider name in `model_fallbacks` to find the correct model to use.
-
-```toml
-[reliability.model_fallbacks]
-"kimi-code" = ["kimi-for-coding"]        # When falling back to kimi-code, use kimi-for-coding
-"gemini" = ["gemini-3.1-pro-preview-customtools"]  # When falling back to gemini, use this model
+**Configuration in `scripts/configure-zeroclaw.js`:**
+```javascript
+reliability: {
+    fallback_providers: ['openrouter'],
+    model_fallbacks: {
+        'glm-5': ['glm-4.7', 'glm-4.6', 'glm-4.5', 'glm-4.5-air', 'openrouter/free'],
+        'glm-4.7': ['glm-4.6', 'glm-4.5', 'glm-4.5-air', 'openrouter/free'],
+        'glm-4.4-air': ['glm-4.5', 'glm-4.5-air', 'openrouter/free'],
+    },
+}
 ```
 
-**How it works (from zeroclaw/src/providers/reliable.rs):**
-1. When primary provider fails, ZeroClaw tries each provider in `fallback_providers`
-2. For each fallback provider, it calls `provider_model_chain()` which looks up the provider name in `provider_model_fallbacks`
-3. If found, it uses the specified model(s) instead of the original model name
-4. If not found, it uses the original model name (which typically fails)
-
-**Common mistake:** Using model-scoped keys like `"zai/glm-5" = ["kimi-code/kimi-for-coding"]` - this doesn't work because the key is not a provider name.
-
-**Fallback provider API keys (environment variables):**
-ZeroClaw reads API keys from environment variables automatically based on provider name:
-- `kimi-code` → `KIMI_API_KEY` or `KIMI_CODE_API_KEY`
-- `gemini` → `GEMINI_API_KEY`
-
-The `reliability.api_keys` field is `Vec<String>` for round-robin keys of the **same provider** (to handle rate limits), NOT for fallback providers. Fallback providers use their own env vars.
-
-**Important:** The whitelist in `scripts/entrypoint.sh` must include all provider-specific env vars (e.g., `KIMI_API_KEY`, `GEMINI_API_KEY`).
+This ensures graceful degradation: first within Z.AI, then to openrouter/free (free tier). The `OPENROUTER_API_KEY` environment variable is already whitelisted in `scripts/entrypoint.sh`.
 
 **Agent settings:**
 - `max_tool_iterations: 1000` - High iteration limit for complex tasks

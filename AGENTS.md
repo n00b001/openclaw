@@ -375,15 +375,18 @@ ZeroClaw's `model_fallbacks` config uses **model names as keys** (not provider n
 
 ```javascript
 model_fallbacks: {
-    'glm-5': ['kimi-for-coding', 'gemini-3.1-pro-preview-customtools'],
+    'glm-5': ['glm-4.7', 'glm-4.6', 'glm-4.5', 'glm-4.5-air', 'openrouter/free'],
+    'glm-4.7': ['glm-4.6', 'glm-4.5', 'glm-4.5-air', 'openrouter/free'],
+    'glm-4.4-air': ['glm-4.5', 'glm-4.5-air', 'openrouter/free'],
 },
 ```
 
 **How it works:**
 1. Try `glm-5` on all providers → fails
-2. Fallback to `kimi-for-coding` on all providers → kimi-code should work
-3. If that fails, try `gemini-3.1-pro-preview-customtools` on all providers
+2. Fallback to `glm-4.7` on all providers
+3. If that fails, try `glm-4.6`, then `glm-4.5`, then `glm-4.5-air`
+4. Final fallback to `openrouter/free` on openrouter provider (requires `OPENROUTER_API_KEY`)
 
-**Note:** Newer versions of zeroclaw may support provider-scoped keys. Check the zeroclaw documentation for your version.
+**Note:** The `fallback_providers` list is `['openrouter']`, so only openrouter is used as a fallback provider after exhausting Z.AI GLM models.
 
-**Important:** When adding new fallback providers, add their env vars to the whitelist in `scripts/entrypoint.sh` (the `--whitelist-environment` flag in the `su` command). Without this, the env vars are lost when switching users.
+**Important:** When using the openrouter/free fallback, you must set `OPENROUTER_API_KEY` environment variable.
