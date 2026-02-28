@@ -146,14 +146,15 @@ if [ "$(id -u)" = "0" ] && [ "${ZEROCLAW_ROOT_MODE:-}" != "1" ]; then
     # ZeroClaw uses public binding (no nginx) as per upstream docker-compose
     # https://github.com/zeroclaw-labs/zeroclaw/blob/main/docker-compose.yml
     if [ "$UPSTREAM" = "zeroclaw" ]; then
-        log_info "ZeroClaw detected - using public binding without nginx..."
+        log_info "ZeroClaw detected - skipping nginx, using public binding..."
         # For zeroclaw, we bind directly to external port with public binding
         # The daemon will bind to 0.0.0.0:EXTERNAL_GATEWAY_PORT
         export ZEROCLAW_ALLOW_PUBLIC_BIND=true
         export ZEROCLAW_GATEWAY_PORT="$EXTERNAL_GATEWAY_PORT"
         export OPENCLAW_INTERNAL_GATEWAY_PORT="$EXTERNAL_GATEWAY_PORT"
     else
-        log_info "Configuring Nginx for $UPSTREAM..."
+        # Configure nginx while still root (requires write access to /etc/nginx)
+        log_info "Configuring Nginx..."
     # Remove any existing nginx configs to avoid conflicts
     rm -f "/etc/nginx/sites-enabled/${UPSTREAM}" 2>/dev/null || true
     rm -f "/etc/nginx/sites-enabled/default" 2>/dev/null || true
