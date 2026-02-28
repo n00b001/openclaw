@@ -32,20 +32,24 @@ const PROVIDER_URLS = {
     zai: 'https://api.z.ai',
     opencode: 'https://api.opencode.ai',
     copilot: 'https://api.githubcopilot.com',
+    venice: 'https://api.venice.ai',
+    minimax: 'https://api.minimax.chat',
 };
 
 const PROVIDER_MODELS = {
     anthropic: [{ id: 'claude-sonnet-4-5-20250929', name: 'claude-sonnet-4-5-20250929' }],
     openai: [{ id: 'gpt-4o', name: 'gpt-4o' }],
-    openrouter: [{ id: 'anthropic/claude-sonnet-4-5', name: 'anthropic/claude-sonnet-4-5' }],
+    openrouter: [{ id: 'anthropic/claude-sonnet-4-5', name: 'anthropic/claude-sonnet-4-5' }, { id: 'free', name: 'free' }],
     gemini: [{ id: 'gemini-2.5-pro', name: 'gemini-2.5-pro' }, { id: 'gemini-3.1-pro-preview-customtools', name: 'gemini-3.1-pro-preview-customtools' }],
     groq: [{ id: 'llama-3.1-70b-versatile', name: 'llama-3.1-70b-versatile' }],
     cerebras: [{ id: 'llama-3.1-70b', name: 'llama-3.1-70b' }],
     kimi: [{ id: 'kimi-k2.5', name: 'kimi-k2.5' }],
     'kimi-code': [{ id: 'kimi-for-coding', name: 'kimi-for-coding' }],
-    zai: [{ id: 'glm-5', name: 'glm-5' }, { id: 'glm-4.7', name: 'glm-4.7' }],
+    zai: [{ id: 'glm-5', name: 'glm-5' }, { id: 'glm-4.7', name: 'glm-4.7' }, { id: 'glm-4.6', name: 'glm-4.6' }, { id: 'glm-4.5', name: 'glm-4.5' }, { id: 'glm-4.5-air', name: 'glm-4.5-air' }],
     opencode: [{ id: 'kimi-k2.5', name: 'kimi-k2.5' }],
     copilot: [{ id: 'gpt-4o', name: 'gpt-4o' }],
+    venice: [{ id: 'venice-1', name: 'venice-1' }],
+    minimax: [{ id: 'minimax-1', name: 'minimax-1' }],
 };
 
 function toTomlKey(key) {
