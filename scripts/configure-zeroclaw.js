@@ -126,16 +126,16 @@ function buildConfig(STATE_DIR, WORKSPACE_DIR, parseList, PROVIDER_URLS, PROVIDE
         reliability: {
             provider_retries: 15,
             provider_backoff_ms: 500,
-            fallback_providers: ['kimi-code', 'gemini'],
+            fallback_providers: ['openrouter'],
             api_keys: Object.values(providerKeys).filter(key => key),
             channel_initial_backoff_secs: 2,
             channel_max_backoff_secs: 60,
             scheduler_poll_secs: 15,
             scheduler_retries: 2,
             model_fallbacks: {
-                'glm-5': ['kimi-for-coding', 'gemini-3.1-pro-preview-customtools'],
-                'glm-4.7': ['kimi-for-coding', 'gemini-3.1-pro-preview-customtools'],
-                'glm-4.4-air': ['kimi-for-coding', 'gemini-3.1-pro-preview-customtools'],
+                'glm-5': ['glm-4.7', 'glm-4.6', 'glm-4.5', 'glm-4.5-air', 'openrouter/free'],
+                'glm-4.7': ['glm-4.6', 'glm-4.5', 'glm-4.5-air', 'openrouter/free'],
+                'glm-4.4-air': ['glm-4.5', 'glm-4.5-air', 'openrouter/free'],
             },
         },
 
