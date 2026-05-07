@@ -15,7 +15,7 @@
 # -----------------------------------------------------------------------------
 # Stage 1: Build from source
 # -----------------------------------------------------------------------------
-FROM node:25-bookworm AS builder
+FROM node:26-bookworm AS builder
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
@@ -82,7 +82,7 @@ RUN echo "${UPSTREAM}" > /tmp/upstream_name && \
 # -----------------------------------------------------------------------------
 # Stage 2: Production Runtime
 # -----------------------------------------------------------------------------
-FROM node:25-bookworm
+FROM node:26-bookworm
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
